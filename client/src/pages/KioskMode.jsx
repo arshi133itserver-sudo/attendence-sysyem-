@@ -40,7 +40,15 @@ export default function KioskMode() {
   // USB RFID Reader Keyboard Wedge Buffers
   const keyBuffer = useRef('');
   const lastKeyTime = useRef(0);
-  const autoDismissTimer = useRef(null);
+
+  // Auto-dismiss scan popup back to idle clock after 3.5 seconds
+  useEffect(() => {
+    if (!scanResult) return;
+    const timer = setTimeout(() => {
+      setScanResult(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [scanResult]);
 
   // Live Digital Clock
   useEffect(() => {
@@ -96,7 +104,6 @@ export default function KioskMode() {
     if (!cleanUid || cleanUid.length < 4 || isProcessing) return;
 
     setIsProcessing(true);
-    if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
 
     try {
       const scanTimestamp = new Date().toISOString();
@@ -154,11 +161,6 @@ export default function KioskMode() {
       });
     } finally {
       setIsProcessing(false);
-
-      // Auto-dismiss popup back to idle clock after 4.5 seconds
-      autoDismissTimer.current = setTimeout(() => {
-        setScanResult(null);
-      }, 4500);
     }
   };
 
@@ -189,7 +191,6 @@ export default function KioskMode() {
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
-      if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
     };
   }, [exitModalOpen, isProcessing, soundEnabled]);
 
@@ -323,7 +324,11 @@ export default function KioskMode() {
           /* ============================================================ */
           /* PUNCH RESULT POPUP CARD                                      */
           /* ============================================================ */
-          <div className="w-full max-w-lg bg-slate-900/90 backdrop-blur-2xl border-2 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200 space-y-6 border-brand-500/40">
+          <div
+            onClick={() => setScanResult(null)}
+            className="w-full max-w-lg bg-slate-900/90 backdrop-blur-2xl border-2 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200 space-y-6 border-brand-500/40 cursor-pointer select-none"
+            title="Click to dismiss immediately"
+          >
             {scanResult.status === 'SUCCESS' ? (
               <>
                 {/* Employee Photo / Avatar */}
@@ -379,9 +384,14 @@ export default function KioskMode() {
                   </div>
                 </div>
 
-                {/* Auto-Dismiss Countdown Bar */}
-                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full animate-[progress_4.5s_linear]" />
+                {/* Auto-Dismiss Countdown Bar & Hint */}
+                <div className="space-y-1.5">
+                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full animate-[progress_3.5s_linear]" />
+                  </div>
+                  <p className="text-[11px] font-mono text-slate-500">
+                    Returning to clock in 3 seconds (or tap anywhere)
+                  </p>
                 </div>
               </>
             ) : (
@@ -399,7 +409,7 @@ export default function KioskMode() {
                   </p>
                 </div>
                 <div className="pt-2 text-xs font-mono text-slate-500">
-                  Resuming in 4 seconds...
+                  Returning to clock in 3 seconds...
                 </div>
               </div>
             )}
