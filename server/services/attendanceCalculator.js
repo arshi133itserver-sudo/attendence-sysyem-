@@ -4,13 +4,12 @@
  */
 
 /**
- * Parse "HH:mm" time string into a Date object on the specified date string (YYYY-MM-DD)
+ * Parse "HH:mm" time string into a Date object on the specified date string (YYYY-MM-DD) locked to IST (+05:30)
  */
 function parseTimeToDate(dateStr, timeStr) {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
-  return d;
+  // Ensure formatted time string "HH:mm"
+  const [h, m] = timeStr.split(':').map(v => String(v).padStart(2, '0'));
+  return new Date(`${dateStr}T${h}:${m}:00+05:30`);
 }
 
 /**

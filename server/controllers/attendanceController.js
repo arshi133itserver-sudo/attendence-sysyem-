@@ -4,14 +4,7 @@ const Setting = require('../models/Setting');
 const AuditLog = require('../models/AuditLog');
 const RawScanLog = require('../models/RawScanLog');
 const { recalculateAttendance, formatMinutes } = require('../services/attendanceCalculator');
-
-function getLocalDateString(date = new Date()) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+const { getLocalDateString } = require('../utils/dateUtils');
 
 // Get Attendance for Today (with real-time working status)
 exports.getTodayAttendance = async (req, res) => {

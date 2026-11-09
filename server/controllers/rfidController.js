@@ -4,26 +4,12 @@ const Attendance = require('../models/Attendance');
 const RawScanLog = require('../models/RawScanLog');
 const Setting = require('../models/Setting');
 const { recalculateAttendance, formatMinutes } = require('../services/attendanceCalculator');
-
-/**
- * Format Date to YYYY-MM-DD in local time
- */
-function getLocalDateString(date = new Date()) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Format Date to HH:mm AM/PM
- */
-function formatTime(date) {
-  if (!date) return '--:--';
-  const d = new Date(date);
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
+const {
+  getLocalDateString,
+  formatTime,
+  getIstHour,
+  getTimeOfDayInfo
+} = require('../utils/dateUtils');
 
 // Handle RFID Scan (Hardware REST API)
 exports.handleScan = async (req, res) => {
@@ -185,12 +171,10 @@ exports.handleScan = async (req, res) => {
       rawPayload: req.body
     });
 
-    // 5. Construct hardware-friendly response & personalized greeting
+    // 5. Construct hardware-friendly response & personalized greeting (locked to IST)
     const formattedScanTime = formatTime(scanTime);
-    const hour = scanTime.getHours();
-    let timeOfDay = 'Morning';
-    if (hour >= 12 && hour < 17) timeOfDay = 'Afternoon';
-    else if (hour >= 17) timeOfDay = 'Evening';
+    const { timeOfDay, hindiGreeting } = getTimeOfDayInfo(scanTime);
+    const hour = getIstHour(scanTime);
 
     let message = '';
     let greetingText = '';

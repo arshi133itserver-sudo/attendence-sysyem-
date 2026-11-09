@@ -80,10 +80,10 @@ export const employeeApi = {
 };
 
 export const rfidApi = {
-  simulateScan: (cardUid, deviceId = 'WEB_SIMULATOR') =>
+  simulateScan: (cardUid, deviceId = 'TABLET_KIOSK_READER', timestamp = null) =>
     apiRequest('/rfid/simulate-scan', {
       method: 'POST',
-      body: JSON.stringify({ cardUid, deviceId })
+      body: JSON.stringify({ cardUid, deviceId, timestamp: timestamp || new Date().toISOString() })
     }),
   getRawLogs: (params = {}) => {
     return apiRequest(`/rfid/raw-logs${buildQueryString(params)}`);

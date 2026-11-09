@@ -2,14 +2,7 @@ const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const Setting = require('../models/Setting');
 const { formatMinutes } = require('../services/attendanceCalculator');
-
-function getLocalDateString(date = new Date()) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+const { getLocalDateString } = require('../utils/dateUtils');
 
 exports.getDashboardStats = async (req, res) => {
   try {

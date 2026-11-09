@@ -4,17 +4,7 @@ const Attendance = require('../models/Attendance');
 const RawScanLog = require('../models/RawScanLog');
 const Setting = require('../models/Setting');
 const { recalculateAttendance } = require('./attendanceCalculator');
-
-/**
- * Format Date to YYYY-MM-DD in local time
- */
-function getLocalDateString(date = new Date()) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+const { getLocalDateString } = require('../utils/dateUtils');
 
 /**
  * Find matching employee by ZKTeco Device User ID (Enroll ID)

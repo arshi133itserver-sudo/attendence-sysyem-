@@ -5,14 +5,7 @@ const Setting = require('../models/Setting');
 const RawScanLog = require('../models/RawScanLog');
 const AuditLog = require('../models/AuditLog');
 const { recalculateAttendance, formatMinutes } = require('../services/attendanceCalculator');
-
-function getLocalDateString(date = new Date()) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+const { getLocalDateString } = require('../utils/dateUtils');
 
 // 1. Staff Submits Selfie Attendance Request
 exports.submitSelfieRequest = async (req, res) => {

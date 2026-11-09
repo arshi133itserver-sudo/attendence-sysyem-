@@ -118,12 +118,29 @@ export function getResolvedVoice() {
 }
 
 /**
+ * Get current hour strictly in Indian Standard Time (IST - Asia/Kolkata)
+ */
+export function getIstHour(date = new Date()) {
+  try {
+    const hourStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      hour12: false
+    }).format(date);
+    return parseInt(hourStr, 10);
+  } catch (e) {
+    return date.getHours();
+  }
+}
+
+/**
  * Helper to determine time-of-day greeting
  */
-export function getTimeGreeting(hour = new Date().getHours()) {
-  if (hour >= 4 && hour < 12) return 'Good Morning';
-  if (hour >= 12 && hour < 17) return 'Good Afternoon';
-  if (hour >= 17 && hour < 21) return 'Good Evening';
+export function getTimeGreeting(hour = null) {
+  const h = (hour !== null && hour !== undefined) ? hour : getIstHour();
+  if (h >= 4 && h < 12) return 'Good Morning';
+  if (h >= 12 && h < 17) return 'Good Afternoon';
+  if (h >= 17 && h < 22) return 'Good Evening';
   return 'Welcome';
 }
 
@@ -132,10 +149,15 @@ export function getTimeGreeting(hour = new Date().getHours()) {
  */
 export function generateGreetingText(staffName, scanType = 'IN', options = {}) {
   const cleanName = (staffName || 'Staff Member').trim();
-  const hour = new Date().getHours();
+  const hour = getIstHour();
   const settings = getVoiceSettings();
   const style = options.style || settings.style;
-  const punchTime = options.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const punchTime = options.time || new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(new Date());
 
   const activeVoice = getResolvedVoice();
   const isHindiVoice = activeVoice && (activeVoice.lang.startsWith('hi') || activeVoice.name.toLowerCase().includes('hindi') || activeVoice.name.toLowerCase().includes('swara'));

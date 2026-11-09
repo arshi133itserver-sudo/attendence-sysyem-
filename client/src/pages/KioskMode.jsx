@@ -99,15 +99,24 @@ export default function KioskMode() {
     if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
 
     try {
-      const res = await rfidApi.simulateScan(cleanUid, 'TABLET_KIOSK_READER');
+      const scanTimestamp = new Date().toISOString();
+      const res = await rfidApi.simulateScan(cleanUid, 'TABLET_KIOSK_READER', scanTimestamp);
 
       if (res.status === 'SUCCESS') {
         playTone(res.scanType);
 
+        // Fallback display time strictly in Indian Standard Time (IST)
+        const istPunchTime = res.time || new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }).format(new Date());
+
         if (soundEnabled) {
           speakStaffGreeting(res.employee?.name || 'Staff Member', res.scanType, {
             customSpokenText: res.spokenGreeting,
-            time: res.time,
+            time: istPunchTime,
             totalHours: res.totalWorkingHours
           });
         }
@@ -116,7 +125,7 @@ export default function KioskMode() {
           status: 'SUCCESS',
           scanType: res.scanType,
           employee: res.employee,
-          time: res.time,
+          time: istPunchTime,
           totalWorkingHours: res.totalWorkingHours,
           message: res.message,
           greeting: res.greeting
@@ -217,14 +226,19 @@ export default function KioskMode() {
     }
   };
 
-  // Formatted Time Strings
-  const timeHoursMins = currentTime.toLocaleTimeString('en-US', {
+  // Formatted Time Strings (Locked to Indian Standard Time - IST)
+  const timeHoursMins = currentTime.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
   });
-  const timeSeconds = String(currentTime.getSeconds()).padStart(2, '0');
-  const dateFormatted = currentTime.toLocaleDateString('en-US', {
+  const timeSeconds = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    second: '2-digit'
+  }).format(currentTime);
+  const dateFormatted = currentTime.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'long',
     year: 'numeric',
     month: 'long',
