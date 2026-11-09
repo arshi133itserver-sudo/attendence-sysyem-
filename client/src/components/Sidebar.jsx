@@ -9,7 +9,8 @@ import {
   Cpu,
   Settings,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Tablet
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -22,6 +23,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { name: 'Monthly Reports', path: '/monthly', icon: FileSpreadsheet, role: 'all' },
     ...(isStaff ? [{ name: 'My Attendance', path: '/my-attendance', icon: UserCheck, role: 'staff' }] : []),
     { name: 'Raw RFID Scans', path: '/raw-scans', icon: Cpu, role: 'admin' },
+    { name: 'Tablet Gate Kiosk', path: '/kiosk', icon: Tablet, role: 'all' },
     { name: 'Settings', path: '/settings', icon: Settings, role: 'admin' }
   ];
 

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, Radio, LogOut, User, Cpu, Clock } from 'lucide-react';
+import { Sun, Moon, Radio, LogOut, User, Cpu, Clock, Tablet } from 'lucide-react';
 
 export default function Navbar({ onOpenSimulator }) {
+  const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [time, setTime] = useState(new Date());
@@ -46,6 +48,16 @@ export default function Navbar({ onOpenSimulator }) {
         >
           <Radio className="w-4 h-4 text-brand-600 animate-pulse" />
           <span>Simulate RFID Tap</span>
+        </button>
+
+        {/* Tablet Kiosk Mode Button */}
+        <button
+          onClick={() => navigate('/kiosk')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all shadow-sm"
+          title="Open Fullscreen Gate Kiosk for Tablet / Gate Terminal"
+        >
+          <Tablet className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <span className="hidden sm:inline">Tablet Kiosk</span>
         </button>
 
         {/* Theme Toggle */}

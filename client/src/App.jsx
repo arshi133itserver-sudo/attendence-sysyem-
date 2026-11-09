@@ -15,6 +15,7 @@ import MonthlyReport from './pages/MonthlyReport';
 import RawScans from './pages/RawScans';
 import Settings from './pages/Settings';
 import StaffPortal from './pages/StaffPortal';
+import KioskMode from './pages/KioskMode';
 
 function ProtectedLayout() {
   const { user, loading, isAdmin } = useAuth();
@@ -126,6 +127,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/kiosk" element={<KioskMode />} />
             <Route path="/*" element={<ProtectedLayout />} />
           </Routes>
         </Router>
