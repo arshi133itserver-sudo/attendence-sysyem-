@@ -84,17 +84,17 @@ const connectDB = async () => {
 
 connectDB();
 
-// Only listen on port and run local interval if NOT running on Vercel Serverless
-if (!process.env.VERCEL && require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`=======================================================`);
-    console.log(`🚀 Arshi Enterprises Attendance Server running on port ${PORT}`);
-    console.log(`📡 RFID Hardware API: http://localhost:${PORT}/api/rfid/scan`);
-    console.log(`📠 ZKTeco MB360 ADMS URL: http://localhost:${PORT}/iclock/cdata`);
-    console.log(`🌐 Web API Base URL: http://localhost:${PORT}/api`);
-    console.log(`=======================================================`);
+// Start listening on port (supports local and Vercel Services)
+app.listen(PORT, () => {
+  console.log(`=======================================================`);
+  console.log(`🚀 Arshi Enterprises Attendance Server running on port ${PORT}`);
+  console.log(`📡 RFID Hardware API: http://localhost:${PORT}/api/rfid/scan`);
+  console.log(`📠 ZKTeco MB360 ADMS URL: http://localhost:${PORT}/iclock/cdata`);
+  console.log(`🌐 Web API Base URL: http://localhost:${PORT}/api`);
+  console.log(`=======================================================`);
 
-    // Background Auto-sync scheduler for local ZKTeco terminal
+  // Background Auto-sync scheduler for local ZKTeco terminal (runs if enabled in settings)
+  if (!process.env.VERCEL) {
     setInterval(async () => {
       try {
         const setting = await Setting.findOne();
@@ -109,7 +109,7 @@ if (!process.env.VERCEL && require.main === module) {
         // Silent ignore background sync error
       }
     }, 5 * 60 * 1000); // Check every 5 minutes
-  });
-}
+  }
+});
 
 module.exports = app;
