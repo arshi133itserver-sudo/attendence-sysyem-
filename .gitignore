@@ -3,6 +3,10 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
+# Local Database files
+server/data/
+data/
+
 # Environment Variables
 .env
 server/.env
