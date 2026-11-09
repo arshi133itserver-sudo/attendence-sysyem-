@@ -112,13 +112,18 @@ export default function KioskMode() {
       if (res.status === 'SUCCESS') {
         playTone(res.scanType);
 
-        // Fallback display time strictly in Indian Standard Time (IST)
-        const istPunchTime = res.time || new Intl.DateTimeFormat('en-IN', {
+        // Fallback display time strictly in Indian Standard Time (IST - Asia/Kolkata)
+        const punchFormatter = new Intl.DateTimeFormat('en-US', {
           timeZone: 'Asia/Kolkata',
           hour: '2-digit',
           minute: '2-digit',
           hour12: true
-        }).format(new Date());
+        });
+        const pParts = punchFormatter.formatToParts(new Date());
+        const pHour = pParts.find(p => p.type === 'hour')?.value || '12';
+        const pMin = pParts.find(p => p.type === 'minute')?.value || '00';
+        const pPeriod = (pParts.find(p => p.type === 'dayPeriod')?.value || 'PM').toUpperCase();
+        const istPunchTime = res.time || `${pHour}:${pMin} ${pPeriod}`;
 
         if (soundEnabled) {
           speakStaffGreeting(res.employee?.name || 'Staff Member', res.scanType, {
@@ -227,18 +232,24 @@ export default function KioskMode() {
     }
   };
 
-  // Formatted Time Strings (Locked to Indian Standard Time - IST)
-  const timeHoursMins = currentTime.toLocaleTimeString('en-IN', {
+  // Formatted Time Strings (Locked strictly to Indian Standard Time - Asia/Kolkata)
+  const istFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Kolkata',
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
   });
-  const timeSeconds = new Intl.DateTimeFormat('en-IN', {
+  const timeParts = istFormatter.formatToParts(currentTime);
+  const hourPart = timeParts.find(p => p.type === 'hour')?.value || '12';
+  const minutePart = timeParts.find(p => p.type === 'minute')?.value || '00';
+  const dayPeriodPart = (timeParts.find(p => p.type === 'dayPeriod')?.value || 'PM').toUpperCase();
+
+  const timeSeconds = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Kolkata',
     second: '2-digit'
   }).format(currentTime);
-  const dateFormatted = currentTime.toLocaleDateString('en-IN', {
+
+  const dateFormatted = currentTime.toLocaleDateString('en-US', {
     timeZone: 'Asia/Kolkata',
     weekday: 'long',
     year: 'numeric',
@@ -423,13 +434,13 @@ export default function KioskMode() {
             <div className="space-y-2">
               <div className="inline-flex items-baseline gap-2 font-mono font-black tracking-tight drop-shadow-2xl">
                 <span className="text-6xl sm:text-8xl md:text-9xl text-white">
-                  {timeHoursMins.replace(/\s(AM|PM)/i, '')}
+                  {hourPart}:{minutePart}
                 </span>
                 <span className="text-2xl sm:text-4xl text-slate-500 font-bold">
                   :{timeSeconds}
                 </span>
                 <span className="text-2xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-rose-400">
-                  {timeHoursMins.includes('PM') ? 'PM' : 'AM'}
+                  {dayPeriodPart}
                 </span>
               </div>
               <p className="text-base sm:text-xl font-medium text-slate-400 tracking-wide">

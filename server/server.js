@@ -68,13 +68,14 @@ app.use((err, req, res, next) => {
 
 // Database Connection & Server Initialization
 const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/arshi_attendance';
+const ATLAS_URI = 'mongodb+srv://arshi133itserver_db_user:msCQomFWXkhiboZc@cluster0.epwaz1l.mongodb.net/arshi_attendance?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || ATLAS_URI;
 
 let isConnected = false;
 const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) return;
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
     isConnected = true;
     console.log('✅ Connected to MongoDB Atlas / Database successfully.');
   } catch (err) {
@@ -82,7 +83,18 @@ const connectDB = async () => {
   }
 };
 
+// Immediate connect
 connectDB();
+
+// Serverless DB connection middleware
+app.use(async (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+    } catch (_) {}
+  }
+  next();
+});
 
 // Start listening on port (supports local and Vercel Services)
 app.listen(PORT, () => {

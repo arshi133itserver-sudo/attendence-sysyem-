@@ -21,19 +21,23 @@ function getLocalDateString(date = new Date()) {
 }
 
 /**
- * Formats time in 12-hour format in IST timezone: "04:23 PM"
+ * Formats time in 12-hour format in IST timezone: e.g. "04:45 PM"
  * @param {Date|string|number} date 
- * @returns {string} e.g. "04:23 PM"
+ * @returns {string} e.g. "04:45 PM"
  */
 function formatTime(date) {
   if (!date) return '--:--';
   const d = new Date(date);
-  return new Intl.DateTimeFormat('en-US', {
+  const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
-  }).format(d);
+  }).formatToParts(d);
+  const h = parts.find(p => p.type === 'hour')?.value || '12';
+  const m = parts.find(p => p.type === 'minute')?.value || '00';
+  const p = (parts.find(p => p.type === 'dayPeriod')?.value || 'PM').toUpperCase();
+  return `${h}:${m} ${p}`;
 }
 
 /**
