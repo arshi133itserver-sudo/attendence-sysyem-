@@ -30,9 +30,24 @@
       }
     },
     {
+      "source": "/assets/(.*)",
+      "destination": {
+        "service": "client",
+        "path": "/assets/$1"
+      }
+    },
+    {
+      "source": "/vite.svg",
+      "destination": {
+        "service": "client",
+        "path": "/vite.svg"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
-        "service": "client"
+        "service": "client",
+        "path": "/index.html"
       }
     }
   ]
