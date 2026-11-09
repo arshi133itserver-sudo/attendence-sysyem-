@@ -83,9 +83,25 @@ function parseTimeToDate(dateStr, timeStr) {
   return new Date(`${dateStr}T${timeStr}:00+05:30`);
 }
 
+/**
+ * Returns human-readable date string in IST: e.g. "09 Nov 2026"
+ * @param {Date|string|number} date 
+ * @returns {string} e.g. "09 Nov 2026"
+ */
+function formatDate(date = new Date()) {
+  const d = date ? new Date(date) : new Date();
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: TIMEZONE,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).format(d);
+}
+
 module.exports = {
   TIMEZONE,
   getLocalDateString,
+  formatDate,
   formatTime,
   getIstHour,
   getTimeOfDayInfo,

@@ -125,6 +125,13 @@ export default function KioskMode() {
         const pPeriod = (pParts.find(p => p.type === 'dayPeriod')?.value || 'PM').toUpperCase();
         const istPunchTime = res.time || `${pHour}:${pMin} ${pPeriod}`;
 
+        const punchDate = res.date || new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }).format(new Date());
+
         if (soundEnabled) {
           speakStaffGreeting(res.employee?.name || 'Staff Member', res.scanType, {
             customSpokenText: res.spokenGreeting,
@@ -138,6 +145,7 @@ export default function KioskMode() {
           scanType: res.scanType,
           employee: res.employee,
           time: istPunchTime,
+          date: punchDate,
           totalWorkingHours: res.totalWorkingHours,
           message: res.message,
           greeting: res.greeting
@@ -289,6 +297,12 @@ export default function KioskMode() {
 
         {/* Live Status & Top Controls */}
         <div className="flex items-center gap-3">
+          {/* Live Indian Date Badge in Header */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-slate-300 text-xs font-mono font-bold">
+            <Clock className="w-3.5 h-3.5 text-brand-400" />
+            <span>{dateFormatted}</span>
+          </div>
+
           {/* Scanner Live Status Badge */}
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/50 border border-emerald-800/60 text-emerald-300 text-xs font-mono font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -383,14 +397,21 @@ export default function KioskMode() {
                 </div>
 
                 {/* Greeting / Punch Info Box */}
-                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1.5">
+                <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-2">
                   <p className="text-sm font-medium text-slate-200">
                     {scanResult.greeting || scanResult.message}
                   </p>
-                  <div className="flex items-center justify-center gap-4 text-xs font-mono font-bold text-slate-400 pt-1">
-                    <span>⏰ Punch: {scanResult.time}</span>
+                  <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs font-mono font-bold pt-1">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-700 text-slate-300">
+                      📅 Date: {scanResult.date}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-700 text-brand-300">
+                      ⏰ Time: {scanResult.time}
+                    </span>
                     {scanResult.totalWorkingHours && (
-                      <span className="text-emerald-400">⚡ Total Duty: {scanResult.totalWorkingHours}</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-950/70 border border-emerald-700 text-emerald-400">
+                        ⚡ Duty: {scanResult.totalWorkingHours}
+                      </span>
                     )}
                   </div>
                 </div>

@@ -6,6 +6,7 @@ const Setting = require('../models/Setting');
 const { recalculateAttendance, formatMinutes } = require('../services/attendanceCalculator');
 const {
   getLocalDateString,
+  formatDate,
   formatTime,
   getIstHour,
   getTimeOfDayInfo
@@ -173,6 +174,7 @@ exports.handleScan = async (req, res) => {
 
     // 5. Construct hardware-friendly response & personalized greeting (locked to IST)
     const formattedScanTime = formatTime(scanTime);
+    const formattedScanDate = formatDate(scanTime);
     const { timeOfDay, hindiGreeting } = getTimeOfDayInfo(scanTime);
     const hour = getIstHour(scanTime);
 
@@ -220,7 +222,8 @@ exports.handleScan = async (req, res) => {
         photo: employee.profilePhoto
       },
       time: formattedScanTime,
-      date: todayStr,
+      date: formattedScanDate,
+      rawDate: todayStr,
       sessionDuration: scanType === 'OUT' ? formatMinutes(currentSession.durationMinutes) : null,
       totalWorkingHours: formatMinutes(attendance.totalWorkingMinutes),
       isLate: attendance.isLate,
