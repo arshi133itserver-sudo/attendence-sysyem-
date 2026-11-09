@@ -11,10 +11,9 @@ router.post('/scan', verifyDeviceApiKey, rfidController.handleScan);
 // Hardware Endpoint - ESP32 Syncs accumulated offline scans
 router.post('/sync-offline', verifyDeviceApiKey, rfidController.syncOfflineScans);
 
-// UI Simulator Endpoint - Allows testing scan directly from web dashboard without hardware
-router.post('/simulate-scan', verifyToken, (req, res, next) => {
-  // Simulator bypasses hardware API key since it uses JWT auth
-  req.body.deviceId = req.body.deviceId || 'WEB_SIMULATOR';
+// UI Simulator & Tablet Kiosk Endpoint - Allows testing scan directly from web dashboard or Gate Tablet Kiosk
+router.post('/simulate-scan', (req, res, next) => {
+  req.body.deviceId = req.body.deviceId || 'TABLET_KIOSK_READER';
   return rfidController.handleScan(req, res);
 });
 
