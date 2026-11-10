@@ -73,6 +73,11 @@ export const employeeApi = {
       method: 'POST',
       body: JSON.stringify(data)
     }),
+  fetchPhotoFromUrl: (url) =>
+    apiRequest('/employees/fetch-photo-url', {
+      method: 'POST',
+      body: JSON.stringify({ url })
+    }),
   delete: (id) =>
     apiRequest(`/employees/${id}`, {
       method: 'DELETE'

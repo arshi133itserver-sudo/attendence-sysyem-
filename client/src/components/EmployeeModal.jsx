@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { employeeApi, settingsApi } from '../services/api';
-import { X, UserPlus, CreditCard, AlertCircle, Key, Lock, Upload, Camera, Trash2, Image, Fingerprint } from 'lucide-react';
+import {
+  X,
+  UserPlus,
+  CreditCard,
+  AlertCircle,
+  Key,
+  Lock,
+  Upload,
+  Camera,
+  Trash2,
+  Image,
+  Fingerprint,
+  Download,
+  RefreshCw,
+  CheckCircle,
+  Globe
+} from 'lucide-react';
 
 function compressAndConvertImage(file, maxWidth = 350, maxHeight = 350, quality = 0.85) {
   return new Promise((resolve, reject) => {
@@ -73,10 +89,15 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
   const [error, setError] = useState('');
   const [createAccount, setCreateAccount] = useState(true);
   const [loginPassword, setLoginPassword] = useState('staff1234');
+  const [photoMode, setPhotoMode] = useState('upload'); // 'upload' or 'url'
+  const [photoUrlInput, setPhotoUrlInput] = useState('');
+  const [fetchingPhoto, setFetchingPhoto] = useState(false);
+  const [photoSuccessMsg, setPhotoSuccessMsg] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setError('');
+      setPhotoSuccessMsg('');
       setLoginPassword('staff1234');
       setCreateAccount(true);
       // Load departments from settings
@@ -87,6 +108,9 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
       }).catch(() => {});
 
       if (employeeToEdit) {
+        const hasExternalUrl = employeeToEdit.profilePhoto && !employeeToEdit.profilePhoto.startsWith('data:');
+        setPhotoUrlInput(hasExternalUrl ? employeeToEdit.profilePhoto : '');
+        setPhotoMode(hasExternalUrl ? 'url' : 'upload');
         setFormData({
           employeeId: employeeToEdit.employeeId || '',
           fullName: employeeToEdit.fullName || '',
@@ -108,6 +132,8 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
           profilePhoto: employeeToEdit.profilePhoto || ''
         });
       } else {
+        setPhotoUrlInput('');
+        setPhotoMode('upload');
         // Fetch next employee ID
         employeeApi.getNextId().then(res => {
           if (res.success && res.nextId) {
@@ -165,6 +191,31 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
       setError('Failed to process image: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFetchPhotoFromUrl = async () => {
+    if (!photoUrlInput || !photoUrlInput.trim()) {
+      setError('Please enter a photo URL or Google Drive link.');
+      return;
+    }
+    setFetchingPhoto(true);
+    setError('');
+    setPhotoSuccessMsg('');
+
+    try {
+      const res = await employeeApi.fetchPhotoFromUrl(photoUrlInput.trim());
+      if (res.success && res.photoData) {
+        setFormData(prev => ({ ...prev, profilePhoto: res.photoData }));
+        setPhotoSuccessMsg('✅ Photo successfully fetched from URL!');
+        setTimeout(() => setPhotoSuccessMsg(''), 5000);
+      } else {
+        setError(res.message || 'Failed to fetch photo from URL.');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch photo from URL. Please ensure link is public.');
+    } finally {
+      setFetchingPhoto(false);
     }
   };
 
@@ -237,50 +288,151 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
             </div>
           )}
 
-          {/* Staff Photo Upload & Live Avatar Card */}
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-            <div className="relative shrink-0">
-              <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-brand-500/50 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 shadow-md">
-                {formData.profilePhoto ? (
-                  <img src={formData.profilePhoto} alt="Staff" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-slate-400">
-                    <Camera className="w-7 h-7 mb-0.5 text-slate-400" />
-                    <span className="text-[9px] font-bold">No Photo</span>
-                  </div>
-                )}
+          {/* Staff Photo Upload & Fetch from URL Card */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                Staff Profile Picture (कर्मचारी फोटो)
+              </label>
+
+              {/* Mode Toggle: File Upload vs URL Fetch */}
+              <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-700/80 p-0.5 rounded-xl text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPhotoMode('upload')}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    photoMode === 'upload'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  📁 Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotoMode('url')}
+                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                    photoMode === 'url'
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  <Globe className="w-3 h-3" />
+                  <span>Fetch from URL</span>
+                </button>
               </div>
             </div>
 
-            <div className="flex-1 space-y-1">
-              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                Staff Profile Picture (कर्मचारी फोटो अपलोड)
-              </label>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Official ID Card & Live Greeting me display hone ke liye photo upload karein.
-              </p>
+            <div className="flex items-start gap-4">
+              {/* Photo Live Preview Box */}
+              <div className="relative shrink-0">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-brand-500/50 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 shadow-md">
+                  {formData.profilePhoto ? (
+                    <img src={formData.profilePhoto} alt="Staff" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-400">
+                      <Camera className="w-7 h-7 mb-0.5 text-slate-400" />
+                      <span className="text-[9px] font-bold">No Photo</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-sm transition-all">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{formData.profilePhoto ? 'Change Picture' : 'Upload Picture'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
-                </label>
+              {/* Controls based on photoMode */}
+              <div className="flex-1 space-y-2 min-w-0">
+                {photoMode === 'upload' ? (
+                  <>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Computer ya mobile se photo upload karein (JPG, PNG, WebP).
+                    </p>
 
-                {formData.profilePhoto && (
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, profilePhoto: '' }))}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Remove</span>
-                  </button>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{formData.profilePhoto ? 'Change Picture' : 'Upload Picture'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileSelect}
+                        />
+                      </label>
+
+                      {formData.profilePhoto && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, profilePhoto: '' }))}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Google Drive, Dropbox, Imgur ya kisi photo ka web link paste karein:
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/... or image URL"
+                        value={photoUrlInput}
+                        onChange={(e) => setPhotoUrlInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleFetchPhotoFromUrl();
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={fetchingPhoto}
+                        onClick={handleFetchPhotoFromUrl}
+                        className="px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1 shrink-0 active:scale-95"
+                      >
+                        {fetchingPhoto ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Fetching...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Fetch Photo</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {photoSuccessMsg && (
+                      <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>{photoSuccessMsg}</span>
+                      </p>
+                    )}
+
+                    {formData.profilePhoto && (
+                      <div className="pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, profilePhoto: '' }));
+                            setPhotoUrlInput('');
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remove Current Photo</span>
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -570,22 +722,6 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
               Duty hours auto-managed by Settings
             </span>
           </div>
-
-          <details className="text-xs group">
-            <summary className="text-[11px] text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer font-medium list-none flex items-center gap-1">
-              <span>+ Or provide external photo URL</span>
-            </summary>
-            <div className="mt-2">
-              <input
-                type="url"
-                name="profilePhoto"
-                placeholder="https://... (direct image web link)"
-                value={formData.profilePhoto && formData.profilePhoto.startsWith('data:') ? '' : formData.profilePhoto}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
-          </details>
 
           {/* Staff Portal Login Credentials Section */}
           <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 space-y-3">

@@ -4,6 +4,7 @@ const employeeController = require('../controllers/employeeController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
 
 router.get('/next-id', verifyToken, requireAdmin, employeeController.getNextEmployeeId);
+router.post('/fetch-photo-url', verifyToken, requireAdmin, employeeController.fetchPhotoFromUrl);
 router.get('/', verifyToken, employeeController.getEmployees);
 router.get('/:id', verifyToken, employeeController.getEmployeeById);
 router.post('/', verifyToken, requireAdmin, employeeController.createEmployee);

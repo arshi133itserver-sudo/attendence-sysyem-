@@ -470,3 +470,79 @@ exports.createOrUpdateAccount = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to configure staff account.', error: error.message });
   }
 };
+
+// Fetch and convert image from web URL (supports Google Drive, Dropbox, and direct image links)
+exports.fetchPhotoFromUrl = async (req, res) => {
+  try {
+    let { url } = req.body;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ success: false, message: 'Image URL is required.' });
+    }
+
+    url = url.trim();
+
+    // 1. Resolve Google Drive share links
+    const gDriveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (gDriveMatch && gDriveMatch[1]) {
+      const fileId = gDriveMatch[1];
+      url = `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+
+    // 2. Resolve Dropbox links
+    if (url.includes('dropbox.com')) {
+      url = url.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
+      if (!url.includes('raw=1')) {
+        url += (url.includes('?') ? '&' : '?') + 'raw=1';
+      }
+    }
+
+    // 3. Fetch the remote image
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (!response.ok) {
+      return res.status(400).json({
+        success: false,
+        message: `Failed to fetch image from URL (HTTP ${response.status}: ${response.statusText}). Please verify the link is publicly accessible.`
+      });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/') && !contentType.includes('octet-stream')) {
+      return res.status(400).json({
+        success: false,
+        message: `The provided URL returned '${contentType}', not an image. Please provide a direct image link.`
+      });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Limit image size to 5MB
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: 'The image at this URL exceeds 5MB. Please choose a smaller photo.'
+      });
+    }
+
+    const mime = contentType.startsWith('image/') ? contentType.split(';')[0] : 'image/jpeg';
+    const base64Data = `data:${mime};base64,${buffer.toString('base64')}`;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Photo successfully fetched from URL!',
+      photoData: base64Data,
+      resolvedUrl: url
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching photo from URL: ' + error.message
+    });
+  }
+};
