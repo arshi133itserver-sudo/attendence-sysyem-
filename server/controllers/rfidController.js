@@ -186,11 +186,21 @@ exports.handleScan = async (req, res) => {
     let lcdLine2 = '';
 
     if (scanType === 'IN') {
-      message = `Welcome ${employee.fullName}! Clocked IN at ${formattedScanTime}.`;
-      greetingText = `Good ${timeOfDay}, ${employee.fullName}! Welcome to Arshi Enterprises.`;
-      spokenGreeting = `Welcome ${employee.fullName}! Good ${timeOfDay}, your entry is marked at ${formattedScanTime}. Have a great and productive day!`;
+      let timingRemark = '';
+      let spokenRemark = '';
+      if (attendance.isEarlyIn) {
+        timingRemark = ` (Early by ${attendance.earlyByMinutes}m)`;
+        spokenRemark = ` You have arrived ${attendance.earlyByMinutes} minutes early today! Great job!`;
+      } else if (attendance.isLate) {
+        timingRemark = ` (Late by ${attendance.lateByMinutes}m)`;
+        spokenRemark = ` Late arrival by ${attendance.lateByMinutes} minutes.`;
+      }
+
+      message = `Welcome ${employee.fullName}! Clocked IN at ${formattedScanTime}.${timingRemark}`;
+      greetingText = `Good ${timeOfDay}, ${employee.fullName}! Welcome to Arshi Enterprises.${timingRemark}`;
+      spokenGreeting = `Welcome ${employee.fullName}! Good ${timeOfDay}, your entry is marked at ${formattedScanTime}.${spokenRemark} Have a great and productive day!`;
       buzzer = { beeps: 1, durationMs: 200 };
-      lcdLine1 = `WELCOME!`;
+      lcdLine1 = attendance.isEarlyIn ? `WELCOME EARLY!` : `WELCOME!`;
       lcdLine2 = employee.fullName.slice(0, 16);
     } else {
       const sessionStr = formatMinutes(currentSession.durationMinutes);
@@ -228,6 +238,8 @@ exports.handleScan = async (req, res) => {
       totalWorkingHours: formatMinutes(attendance.totalWorkingMinutes),
       isLate: attendance.isLate,
       lateByMinutes: attendance.lateByMinutes,
+      isEarlyIn: attendance.isEarlyIn,
+      earlyByMinutes: attendance.earlyByMinutes,
       buzzer
     });
   } catch (error) {

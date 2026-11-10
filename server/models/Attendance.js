@@ -74,6 +74,14 @@ const AttendanceSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  isEarlyIn: {
+    type: Boolean,
+    default: false
+  },
+  earlyByMinutes: {
+    type: Number,
+    default: 0
+  },
   isEarlyExit: {
     type: Boolean,
     default: false

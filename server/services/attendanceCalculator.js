@@ -117,21 +117,33 @@ function recalculateAttendance(attendanceDoc, settings, employee = null) {
   attendanceDoc.totalWorkingMinutes = totalWorkingMinutes;
   attendanceDoc.breakMinutes = breakMinutes;
 
-  // Calculate Late Arrival using gender-specific targetOfficeStart
+  // Calculate Early Arrival or Late Arrival using targetOfficeStart
   if (firstInTime) {
     const scheduledStart = parseTimeToDate(attendanceDoc.date, targetOfficeStart);
     const graceCutoff = new Date(scheduledStart.getTime() + gracePeriodMinutes * 60000);
 
-    if (firstInTime > graceCutoff) {
-      attendanceDoc.isLate = true;
-      attendanceDoc.lateByMinutes = Math.max(0, Math.round((firstInTime.getTime() - scheduledStart.getTime()) / 60000));
-    } else {
+    if (firstInTime < scheduledStart) {
+      attendanceDoc.isEarlyIn = true;
+      attendanceDoc.earlyByMinutes = Math.max(0, Math.round((scheduledStart.getTime() - firstInTime.getTime()) / 60000));
       attendanceDoc.isLate = false;
       attendanceDoc.lateByMinutes = 0;
+    } else if (firstInTime > graceCutoff) {
+      attendanceDoc.isLate = true;
+      attendanceDoc.lateByMinutes = Math.max(0, Math.round((firstInTime.getTime() - scheduledStart.getTime()) / 60000));
+      attendanceDoc.isEarlyIn = false;
+      attendanceDoc.earlyByMinutes = 0;
+    } else {
+      // On time (between scheduledStart and graceCutoff)
+      attendanceDoc.isLate = false;
+      attendanceDoc.lateByMinutes = 0;
+      attendanceDoc.isEarlyIn = false;
+      attendanceDoc.earlyByMinutes = 0;
     }
   } else {
     attendanceDoc.isLate = false;
     attendanceDoc.lateByMinutes = 0;
+    attendanceDoc.isEarlyIn = false;
+    attendanceDoc.earlyByMinutes = 0;
   }
 
   // Calculate Early Exit using gender-specific targetOfficeEnd

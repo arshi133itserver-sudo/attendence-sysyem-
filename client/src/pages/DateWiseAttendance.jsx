@@ -268,18 +268,28 @@ export default function DateWiseAttendance() {
                       <span>{row.breakDuration}</span>
                     </td>
                     <td className="py-3.5 space-y-0.5">
+                      {row.isEarlyIn === 'Yes' && (
+                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                          <span>Early (-{row.earlyInBy})</span>
+                        </div>
+                      )}
                       {row.isLate === 'Yes' && (
                         <div className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
-                          <span>Late: +{row.lateBy}</span>
+                          <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                          <span>Late (+{row.lateBy})</span>
                         </div>
                       )}
                       {row.isEarlyExit === 'Yes' && (
                         <div className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
-                          <span>Early: -{row.earlyExitBy}</span>
+                          <span>Early Exit (-{row.earlyExitBy})</span>
                         </div>
                       )}
-                      {row.isLate === 'No' && row.isEarlyExit === 'No' && (
-                        <span className="text-[10px] text-slate-400">On Time</span>
+                      {row.isLate === 'No' && row.isEarlyIn === 'No' && row.isEarlyExit === 'No' && row.status !== 'Absent' && (
+                        <span className="text-[10px] text-slate-400 font-medium">On Time</span>
+                      )}
+                      {row.status === 'Absent' && (
+                        <span className="text-[10px] text-slate-400">--</span>
                       )}
                     </td>
                     <td className="py-3.5">

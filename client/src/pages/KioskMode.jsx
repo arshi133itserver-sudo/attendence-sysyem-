@@ -408,6 +408,16 @@ export default function KioskMode() {
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-700 text-brand-300">
                       ⏰ Time: {scanResult.time}
                     </span>
+                    {scanResult.isEarlyIn && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-950/70 border border-emerald-600 text-emerald-300">
+                        🟢 Early (-{scanResult.earlyByMinutes}m)
+                      </span>
+                    )}
+                    {scanResult.isLate && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-950/70 border border-amber-600 text-amber-300">
+                        ⚠️ Late (+{scanResult.lateByMinutes}m)
+                      </span>
+                    )}
                     {scanResult.totalWorkingHours && (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-950/70 border border-emerald-700 text-emerald-400">
                         ⚡ Duty: {scanResult.totalWorkingHours}

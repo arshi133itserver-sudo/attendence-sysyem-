@@ -87,6 +87,8 @@ exports.getDateWiseReport = async (req, res) => {
           totalWorkingMinutes: att.totalWorkingMinutes || 0,
           totalWorkingHours: formatMinutes(att.totalWorkingMinutes || 0),
           breakDuration: formatMinutes(att.breakMinutes || 0),
+          isEarlyIn: att.isEarlyIn ? 'Yes' : 'No',
+          earlyInBy: att.isEarlyIn ? `${att.earlyByMinutes}m` : '--',
           isLate: att.isLate ? 'Yes' : 'No',
           lateBy: att.isLate ? `${att.lateByMinutes}m` : '--',
           isEarlyExit: att.isEarlyExit ? 'Yes' : 'No',
@@ -124,6 +126,8 @@ exports.getDateWiseReport = async (req, res) => {
           totalWorkingMinutes: 0,
           totalWorkingHours: '0h 00m',
           breakDuration: '0h 00m',
+          isEarlyIn: 'No',
+          earlyInBy: '--',
           isLate: 'No',
           lateBy: '--',
           isEarlyExit: 'No',
@@ -204,6 +208,7 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
     let absentDays = 0;
     let halfDays = 0;
     let lateArrivals = 0;
+    let earlyArrivals = 0;
     let totalWorkingMinutes = 0;
     let totalOvertimeMinutes = 0;
     const dailyRecords = [];
@@ -245,6 +250,10 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         minutesWorked = att.totalWorkingMinutes || 0;
         totalWorkingMinutes += minutesWorked;
 
+        if (att.isEarlyIn) {
+          earlyArrivals++;
+        }
+
         if (att.isLate) {
           lateArrivals++;
           lateBy = att.lateByMinutes;
@@ -281,6 +290,8 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         outTime,
         workingMinutes: minutesWorked,
         workingHours: formatMinutes(minutesWorked),
+        isEarlyIn: att && att.isEarlyIn ? true : false,
+        earlyBy: att && att.isEarlyIn && att.earlyByMinutes ? `${att.earlyByMinutes}m` : '--',
         lateBy: lateBy > 0 ? `${lateBy}m` : '--',
         overtime: overtime > 0 ? `${overtime}m` : '--',
         isManual: att ? (att.isManualCorrection ? 'Yes' : 'No') : 'No'
@@ -323,6 +334,7 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         absentDays,
         halfDays,
         lateArrivals,
+        earlyArrivals,
         totalWorkingMinutes,
         totalWorkingHours: formatMinutes(totalWorkingMinutes),
         averageWorkingMinutes,

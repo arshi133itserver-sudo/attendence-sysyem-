@@ -101,6 +101,7 @@ export default function StaffPortal() {
   };
 
   const filteredRecords = (reportData?.dailyRecords || []).filter(r => {
+    if (activeFilter === 'EARLY') return r.isEarlyIn;
     if (activeFilter === 'LATE') return r.lateBy !== '--' || r.status === 'Late';
     if (activeFilter === 'ABSENT') return r.status === 'Absent';
     if (activeFilter === 'PRESENT') return r.status === 'Present' || r.status === 'Late' || r.status === 'Half-Day';
@@ -562,6 +563,16 @@ export default function StaffPortal() {
               Present ({summary?.presentDays || 0})
             </button>
             <button
+              onClick={() => setActiveFilter('EARLY')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                activeFilter === 'EARLY'
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Early ({summary?.earlyArrivals || 0})
+            </button>
+            <button
               onClick={() => setActiveFilter('LATE')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 activeFilter === 'LATE'
@@ -662,6 +673,13 @@ export default function StaffPortal() {
                   </div>
                 </div>
 
+                {r.isEarlyIn && (
+                  <div className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Early by {r.earlyBy}</span>
+                  </div>
+                )}
+
                 {r.lateBy !== '--' && (
                   <div className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="w-3.5 h-3.5" />
@@ -683,7 +701,7 @@ export default function StaffPortal() {
                 <th className="py-3">Clock IN</th>
                 <th className="py-3">Clock OUT</th>
                 <th className="py-3">Working Hours</th>
-                <th className="py-3">Late Arrival Status</th>
+                <th className="py-3">Arrival Status</th>
                 <th className="py-3">Overtime</th>
                 <th className="py-3 pr-6">Attendance Status</th>
               </tr>
@@ -725,7 +743,12 @@ export default function StaffPortal() {
                       {r.workingHours}
                     </td>
                     <td className="py-3.5 font-mono font-bold">
-                      {r.lateBy !== '--' ? (
+                      {r.isEarlyIn ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Early (-{r.earlyBy})</span>
+                        </span>
+                      ) : r.lateBy !== '--' ? (
                         <span className="text-amber-600 flex items-center gap-1">
                           <AlertTriangle className="w-3.5 h-3.5" />
                           <span>Late (+{r.lateBy})</span>
