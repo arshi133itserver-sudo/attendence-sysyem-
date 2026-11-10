@@ -30,18 +30,23 @@ export default function DateWiseAttendance() {
   const [search, setSearch] = useState('');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchRecords = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
       const res = await reportApi.getDateWise(selectedDate, department, search);
-      if (res.success) {
+      if (res.success && Array.isArray(res.data)) {
         setRecords(res.data);
+      } else {
+        setErrorMsg(res.message || 'Failed to load date report.');
       }
     } catch (err) {
       console.error('Failed to load date report:', err);
+      setErrorMsg(err.message || 'Error connecting to server.');
     } finally {
       setLoading(false);
     }
@@ -187,7 +192,31 @@ export default function DateWiseAttendance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-              {records.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="10" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin text-brand-600" />
+                      <span className="text-xs font-medium">Loading attendance records for {selectedDate}...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : errorMsg ? (
+                <tr>
+                  <td colSpan="10" className="py-8 text-center text-rose-500 text-xs">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-rose-500" />
+                      <span>{errorMsg}</span>
+                      <button
+                        onClick={fetchRecords}
+                        className="px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-800 text-xs font-bold hover:bg-rose-100"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : records.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="py-8 text-center text-slate-400">
                     No attendance records for date {selectedDate}.

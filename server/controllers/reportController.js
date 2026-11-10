@@ -45,7 +45,7 @@ exports.getDateWiseReport = async (req, res) => {
     for (const att of attendances) {
       if (att.sessions && att.sessions.length > 0 && att.sessions[0].outTime && (!att.totalWorkingMinutes || att.totalWorkingMinutes === 0)) {
         const { recalculateAttendance } = require('../services/attendanceCalculator');
-        recalculateAttendance(att, setting, employee);
+        recalculateAttendance(att, setting, att.employee);
         await att.save();
       }
     }
@@ -57,6 +57,8 @@ exports.getDateWiseReport = async (req, res) => {
 
     const report = employees.map(emp => {
       const att = attMap.get(emp._id.toString());
+      const defaultExpectedHours = emp.customWorkingHours || (emp.gender === 'Female' ? (setting.femaleExpectedWorkingHours || 7) : (setting.maleExpectedWorkingHours || 8));
+
       if (att && att.sessions && att.sessions.length > 0) {
         return {
           _id: att._id,
@@ -74,7 +76,7 @@ exports.getDateWiseReport = async (req, res) => {
           gender: emp.gender || 'Male',
           department: emp.department,
           designation: emp.designation,
-          expectedWorkingHours: att.expectedWorkingHours || (emp.gender === 'Female' ? (setting.femaleExpectedWorkingHours || 7) : (setting.maleExpectedWorkingHours || 8)),
+          expectedWorkingHours: att.expectedWorkingHours || defaultExpectedHours,
           date,
           status: att.status,
           inTime: formatTime(att.firstInTime),
@@ -111,7 +113,7 @@ exports.getDateWiseReport = async (req, res) => {
           gender: emp.gender || 'Male',
           department: emp.department,
           designation: emp.designation,
-          expectedWorkingHours: att.expectedWorkingHours || (emp.gender === 'Female' ? (setting.femaleExpectedWorkingHours || 7) : (setting.maleExpectedWorkingHours || 8)),
+          expectedWorkingHours: defaultExpectedHours,
           date,
           status: 'Absent',
           inTime: '--:--',
