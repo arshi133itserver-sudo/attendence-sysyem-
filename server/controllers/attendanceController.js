@@ -436,8 +436,6 @@ exports.manualAttendanceEntry = async (req, res) => {
       count: targetEmployees.length,
       data: results.length === 1 ? results[0] : results
     });
-      data: attendance
-    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Manual entry failed.', error: error.message });
   }

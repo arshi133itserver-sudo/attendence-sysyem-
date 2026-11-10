@@ -119,13 +119,21 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
             reason: reason || (isSunday ? 'Sunday / Weekly Holiday' : 'Company Holiday')
           });
         } else if (manualType === 'FULL_DAY') {
+          let resolvedOut = outTimeStr;
+          if (inTimeStr && outTimeStr) {
+            const [inH] = inTimeStr.split(':').map(Number);
+            const [outH, outM] = outTimeStr.split(':').map(Number);
+            if (outH < inH && outH + 12 < 24) {
+              resolvedOut = `${String(outH + 12).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
+            }
+          }
           // Send full day entry
           await attendanceApi.manualEntry({
             employeeId: selectedEmployeeId,
             date,
             type: 'FULL_DAY',
             inTime: new Date(`${date}T${inTimeStr}:00`),
-            outTime: new Date(`${date}T${outTimeStr}:00`),
+            outTime: new Date(`${date}T${resolvedOut}:00`),
             reason
           });
         } else {
@@ -142,9 +150,17 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
         // Correction workflow
         const sessions = [];
         if (inTimeStr && status !== 'Holiday' && status !== 'Weekend' && status !== 'Absent') {
+          let resolvedOut = outTimeStr;
+          if (outTimeStr) {
+            const [inH] = inTimeStr.split(':').map(Number);
+            const [outH, outM] = outTimeStr.split(':').map(Number);
+            if (outH < inH && outH + 12 < 24) {
+              resolvedOut = `${String(outH + 12).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
+            }
+          }
           sessions.push({
             inTime: new Date(`${date}T${inTimeStr}:00`),
-            outTime: outTimeStr ? new Date(`${date}T${outTimeStr}:00`) : null,
+            outTime: resolvedOut ? new Date(`${date}T${resolvedOut}:00`) : null,
             inDeviceId: 'ADMIN_CORRECTION',
             outDeviceId: 'ADMIN_CORRECTION'
           });
