@@ -20,6 +20,34 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
+// Database Connection for Local & Serverless (Vercel)
+const ATLAS_URI = 'mongodb+srv://arshi133itserver_db_user:msCQomFWXkhiboZc@cluster0.epwaz1l.mongodb.net/arshi_attendance?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || ATLAS_URI;
+
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) return;
+  try {
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
+    isConnected = true;
+    console.log('✅ Connected to MongoDB Atlas successfully.');
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err.message);
+  }
+};
+
+connectDB();
+
+// Serverless DB connection middleware (ensures DB is connected before any route executes)
+app.use(async (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+    } catch (_) {}
+  }
+  next();
+});
+
 // ZKTeco Controller for ADMS Cloud Push
 const zktecoController = require('./controllers/zktecoController');
 const zktecoService = require('./services/zktecoService');
@@ -66,35 +94,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Database Connection & Server Initialization
+// Server Initialization
 const PORT = process.env.PORT || 5000;
-const ATLAS_URI = 'mongodb+srv://arshi133itserver_db_user:msCQomFWXkhiboZc@cluster0.epwaz1l.mongodb.net/arshi_attendance?retryWrites=true&w=majority';
-const MONGODB_URI = process.env.MONGODB_URI || ATLAS_URI;
-
-let isConnected = false;
-const connectDB = async () => {
-  if (isConnected && mongoose.connection.readyState === 1) return;
-  try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
-    isConnected = true;
-    console.log('✅ Connected to MongoDB Atlas / Database successfully.');
-  } catch (err) {
-    console.error('❌ MongoDB Connection Error:', err.message);
-  }
-};
-
-// Immediate connect
-connectDB();
-
-// Serverless DB connection middleware
-app.use(async (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
-    try {
-      await connectDB();
-    } catch (_) {}
-  }
-  next();
-});
 
 // Start listening on port (supports local and Vercel Services)
 app.listen(PORT, () => {
