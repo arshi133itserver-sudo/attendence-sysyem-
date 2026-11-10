@@ -3,12 +3,7 @@ const Employee = require('../models/Employee');
 const Setting = require('../models/Setting');
 const Holiday = require('../models/Holiday');
 const { formatMinutes } = require('../services/attendanceCalculator');
-
-function formatTime(date) {
-  if (!date) return '--:--';
-  const d = new Date(date);
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
+const { formatTime } = require('../utils/dateUtils');
 
 // Date-Wise Comprehensive Report
 exports.getDateWiseReport = async (req, res) => {
