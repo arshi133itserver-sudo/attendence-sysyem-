@@ -281,11 +281,16 @@ export default function DateWiseAttendance() {
                         </div>
                       )}
                       {row.isEarlyExit === 'Yes' && (
-                        <div className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
+                        <div className="text-[10px] font-bold text-rose-500 dark:text-rose-400 flex items-center gap-1">
                           <span>Early Exit (-{row.earlyExitBy})</span>
                         </div>
                       )}
-                      {row.isLate === 'No' && row.isEarlyIn === 'No' && row.isEarlyExit === 'No' && row.status !== 'Absent' && (
+                      {row.isLateExit === 'Yes' && (
+                        <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                          <span>Late Exit (+{row.lateExitBy})</span>
+                        </div>
+                      )}
+                      {row.isLate === 'No' && row.isEarlyIn === 'No' && row.isEarlyExit === 'No' && row.isLateExit === 'No' && row.status !== 'Absent' && (
                         <span className="text-[10px] text-slate-400 font-medium">On Time</span>
                       )}
                       {row.status === 'Absent' && (

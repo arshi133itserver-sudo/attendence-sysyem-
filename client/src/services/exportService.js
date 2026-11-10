@@ -53,6 +53,7 @@ export function exportDateWiseExcel(records = [], selectedDate = '', department 
   let absentCount = 0;
   let halfDayCount = 0;
   let lateCount = 0;
+  let lateExitCount = 0;
   let earlyExitCount = 0;
   let totalDutyMinutes = 0;
 
@@ -64,6 +65,7 @@ export function exportDateWiseExcel(records = [], selectedDate = '', department 
 
     if (r.isLate) lateCount++;
     if (r.isEarlyExit) earlyExitCount++;
+    if (r.isLateExit === 'Yes' || r.isLateExit === true) lateExitCount++;
 
     // Calculate duty minutes if available
     if (r.totalWorkingMinutes) {
@@ -138,6 +140,7 @@ export function exportDateWiseExcel(records = [], selectedDate = '', department 
       'Late Arrival',
       'Late By (Mins)',
       'Early Departure',
+      'Late Checkout',
       'Overtime',
       'Punch Count',
       'Verification'
@@ -161,7 +164,8 @@ export function exportDateWiseExcel(records = [], selectedDate = '', department 
       r.breakDuration || '--',
       r.isLate ? 'YES (LATE)' : 'ON TIME',
       r.lateBy || '--',
-      r.isEarlyExit ? `YES (${r.earlyExitBy || ''})` : 'NO',
+      r.isEarlyExit === 'Yes' || r.isEarlyExit === true ? `YES (${r.earlyExitBy || ''})` : 'NO',
+      r.isLateExit === 'Yes' || r.isLateExit === true ? `YES (+${r.lateExitBy || ''})` : 'NO',
       r.overtime || '--',
       r.sessionsCount || (r.inTime ? 1 : 0),
       r.isManualCorrection ? 'Manual Admin Edit' : 'RFID Smart Tap'
@@ -313,7 +317,8 @@ export function exportMonthlyExcel(employee, month, summary = {}, dailyRecords =
       'IN Time',
       'OUT Time',
       'Working Hours',
-      'Late By (Mins)',
+      'Late IN',
+      'Late OUT',
       'Early Exit',
       'Overtime',
       'Audit / Adjustment Notes'
@@ -330,7 +335,8 @@ export function exportMonthlyExcel(employee, month, summary = {}, dailyRecords =
       r.outTime || '--:--',
       r.workingHours || '0h 0m',
       r.lateBy || '--',
-      r.earlyExit || '--',
+      r.lateExitBy || (r.isLateExit ? 'YES' : '--'),
+      r.earlyExitBy || r.earlyExit || '--',
       r.overtime || '--',
       r.isManual ? 'Manual Admin Adjustment' : 'RFID Terminal Scan'
     ]);

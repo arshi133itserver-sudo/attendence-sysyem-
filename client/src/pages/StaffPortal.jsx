@@ -11,6 +11,7 @@ import {
   FileText,
   CreditCard,
   AlertTriangle,
+  AlertCircle,
   UserX,
   TrendingUp,
   CheckCircle,
@@ -103,6 +104,7 @@ export default function StaffPortal() {
   const filteredRecords = (reportData?.dailyRecords || []).filter(r => {
     if (activeFilter === 'EARLY') return r.isEarlyIn;
     if (activeFilter === 'LATE') return r.lateBy !== '--' || r.status === 'Late';
+    if (activeFilter === 'LATE_OUT') return r.isLateExit;
     if (activeFilter === 'ABSENT') return r.status === 'Absent';
     if (activeFilter === 'PRESENT') return r.status === 'Present' || r.status === 'Late' || r.status === 'Half-Day';
     return true;
@@ -580,7 +582,17 @@ export default function StaffPortal() {
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Late ({summary?.lateArrivals || 0})
+              Late IN ({summary?.lateArrivals || 0})
+            </button>
+            <button
+              onClick={() => setActiveFilter('LATE_OUT')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                activeFilter === 'LATE_OUT'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Late OUT ({summary?.lateExits || 0})
             </button>
             <button
               onClick={() => setActiveFilter('ABSENT')}
@@ -686,6 +698,20 @@ export default function StaffPortal() {
                     <span>Late by {r.lateBy}</span>
                   </div>
                 )}
+
+                {r.isLateExit && (
+                  <div className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Late Checkout by {r.lateExitBy}</span>
+                  </div>
+                )}
+
+                {r.isEarlyExit && (
+                  <div className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-rose-500 dark:text-rose-400">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>Early Exit by {r.earlyExitBy}</span>
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -701,7 +727,7 @@ export default function StaffPortal() {
                 <th className="py-3">Clock IN</th>
                 <th className="py-3">Clock OUT</th>
                 <th className="py-3">Working Hours</th>
-                <th className="py-3">Arrival Status</th>
+                <th className="py-3">Timing (IN / OUT)</th>
                 <th className="py-3">Overtime</th>
                 <th className="py-3 pr-6">Attendance Status</th>
               </tr>
@@ -742,20 +768,36 @@ export default function StaffPortal() {
                     <td className="py-3.5 font-mono font-bold text-slate-800 dark:text-slate-200">
                       {r.workingHours}
                     </td>
-                    <td className="py-3.5 font-mono font-bold">
+                    <td className="py-3.5 font-mono text-[11px] font-bold space-y-1">
+                      {/* Arrival */}
                       {r.isEarlyIn ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <div className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>Early (-{r.earlyBy})</span>
-                        </span>
+                        </div>
                       ) : r.lateBy !== '--' ? (
-                        <span className="text-amber-600 flex items-center gap-1">
+                        <div className="text-amber-600 flex items-center gap-1">
                           <AlertTriangle className="w-3.5 h-3.5" />
                           <span>Late (+{r.lateBy})</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 font-normal">On Time</span>
-                      )}
+                        </div>
+                      ) : r.inTime !== '--:--' ? (
+                        <div className="text-slate-400 font-normal">On Time IN</div>
+                      ) : null}
+
+                      {/* Departure */}
+                      {r.isLateExit ? (
+                        <div className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Late OUT (+{r.lateExitBy})</span>
+                        </div>
+                      ) : r.isEarlyExit ? (
+                        <div className="text-rose-500 dark:text-rose-400 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>Early OUT (-{r.earlyExitBy})</span>
+                        </div>
+                      ) : r.outTime !== '--:--' ? (
+                        <div className="text-slate-400 font-normal">On Time OUT</div>
+                      ) : null}
                     </td>
                     <td className="py-3.5 font-mono text-brand-600 font-bold">
                       {r.overtime !== '--' ? `+${r.overtime}` : '--'}

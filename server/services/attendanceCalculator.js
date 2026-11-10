@@ -146,19 +146,30 @@ function recalculateAttendance(attendanceDoc, settings, employee = null) {
     attendanceDoc.earlyByMinutes = 0;
   }
 
-  // Calculate Early Exit using gender-specific targetOfficeEnd
+  // Calculate Early Exit or Late Checkout using gender-specific targetOfficeEnd
   if (lastOutTime) {
     const scheduledEnd = parseTimeToDate(attendanceDoc.date, targetOfficeEnd);
     if (lastOutTime < scheduledEnd) {
       attendanceDoc.isEarlyExit = true;
       attendanceDoc.earlyExitMinutes = Math.max(0, Math.round((scheduledEnd.getTime() - lastOutTime.getTime()) / 60000));
+      attendanceDoc.isLateExit = false;
+      attendanceDoc.lateExitMinutes = 0;
+    } else if (lastOutTime > scheduledEnd) {
+      attendanceDoc.isLateExit = true;
+      attendanceDoc.lateExitMinutes = Math.max(0, Math.round((lastOutTime.getTime() - scheduledEnd.getTime()) / 60000));
+      attendanceDoc.isEarlyExit = false;
+      attendanceDoc.earlyExitMinutes = 0;
     } else {
       attendanceDoc.isEarlyExit = false;
       attendanceDoc.earlyExitMinutes = 0;
+      attendanceDoc.isLateExit = false;
+      attendanceDoc.lateExitMinutes = 0;
     }
   } else {
     attendanceDoc.isEarlyExit = false;
     attendanceDoc.earlyExitMinutes = 0;
+    attendanceDoc.isLateExit = false;
+    attendanceDoc.lateExitMinutes = 0;
   }
 
   // Overtime Calculation using gender-specific targetOvertimeThreshold and targetExpectedHours

@@ -206,11 +206,22 @@ exports.handleScan = async (req, res) => {
       const sessionStr = formatMinutes(currentSession.durationMinutes);
       const totalStr = formatMinutes(attendance.totalWorkingMinutes);
       const exitWish = hour >= 18 ? 'Have a good evening and take care!' : (hour >= 12 ? 'Have a wonderful afternoon!' : 'Have a wonderful day!');
-      message = `Thank you ${employee.fullName}! Checkout successful at ${formattedScanTime}. (Today: ${totalStr})`;
-      greetingText = `Thank you ${employee.fullName}! Checkout successful (${totalStr}).`;
-      spokenGreeting = `Thank you ${employee.fullName}! Checkout successful at ${formattedScanTime}. Total working hours: ${totalStr}. ${exitWish} Goodbye!`;
+      
+      let exitRemark = '';
+      let spokenExitRemark = '';
+      if (attendance.isLateExit) {
+        exitRemark = ` (Late Checkout +${attendance.lateExitMinutes}m)`;
+        spokenExitRemark = ` You stayed ${attendance.lateExitMinutes} minutes after scheduled shift.`;
+      } else if (attendance.isEarlyExit) {
+        exitRemark = ` (Early Exit -${attendance.earlyExitMinutes}m)`;
+        spokenExitRemark = ` Checked out ${attendance.earlyExitMinutes} minutes early.`;
+      }
+
+      message = `Thank you ${employee.fullName}! Checkout successful at ${formattedScanTime}.${exitRemark} (Today: ${totalStr})`;
+      greetingText = `Thank you ${employee.fullName}! Checkout successful${exitRemark} (${totalStr}).`;
+      spokenGreeting = `Thank you ${employee.fullName}! Checkout successful at ${formattedScanTime}.${spokenExitRemark} Total working hours: ${totalStr}. ${exitWish} Goodbye!`;
       buzzer = { beeps: 2, durationMs: 150 };
-      lcdLine1 = `CHECKOUT OK!`;
+      lcdLine1 = attendance.isLateExit ? `LATE CHECKOUT!` : (attendance.isEarlyExit ? `EARLY EXIT!` : `CHECKOUT OK!`);
       lcdLine2 = `${employee.fullName.slice(0, 8)} ${totalStr}`.slice(0, 16);
     }
 
@@ -240,6 +251,12 @@ exports.handleScan = async (req, res) => {
       lateByMinutes: attendance.lateByMinutes,
       isEarlyIn: attendance.isEarlyIn,
       earlyByMinutes: attendance.earlyByMinutes,
+      isLateExit: attendance.isLateExit,
+      lateExitMinutes: attendance.lateExitMinutes,
+      isEarlyExit: attendance.isEarlyExit,
+      earlyExitMinutes: attendance.earlyExitMinutes,
+      isOvertime: attendance.isOvertime,
+      overtimeMinutes: attendance.overtimeMinutes,
       buzzer
     });
   } catch (error) {

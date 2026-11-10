@@ -272,11 +272,31 @@ export default function MonthlyReport() {
                   <td className="py-3 font-semibold text-slate-500">
                     {r.day}
                   </td>
-                  <td className="py-3 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                    {r.inTime}
+                  <td className="py-3 font-mono font-bold">
+                    <span className="text-emerald-600 dark:text-emerald-400">{r.inTime}</span>
+                    {r.isEarlyIn && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">
+                        Early (-{r.earlyBy})
+                      </span>
+                    )}
+                    {r.lateBy !== '--' && (
+                      <span className="text-[10px] text-amber-600 font-bold block">
+                        Late (+{r.lateBy})
+                      </span>
+                    )}
                   </td>
-                  <td className="py-3 font-mono text-blue-600 dark:text-blue-400 font-bold">
-                    {r.outTime}
+                  <td className="py-3 font-mono font-bold">
+                    <span className="text-blue-600 dark:text-blue-400">{r.outTime}</span>
+                    {r.isLateExit && (
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold block">
+                        Late (+{r.lateExitBy})
+                      </span>
+                    )}
+                    {r.isEarlyExit && (
+                      <span className="text-[10px] text-rose-500 dark:text-rose-400 font-bold block">
+                        Early (-{r.earlyExitBy})
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 font-mono font-bold text-slate-800 dark:text-slate-200">
                     {r.workingHours}

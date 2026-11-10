@@ -90,6 +90,14 @@ const AttendanceSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  isLateExit: {
+    type: Boolean,
+    default: false
+  },
+  lateExitMinutes: {
+    type: Number,
+    default: 0
+  },
   isOvertime: {
     type: Boolean,
     default: false

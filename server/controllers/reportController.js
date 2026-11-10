@@ -93,6 +93,8 @@ exports.getDateWiseReport = async (req, res) => {
           lateBy: att.isLate ? `${att.lateByMinutes}m` : '--',
           isEarlyExit: att.isEarlyExit ? 'Yes' : 'No',
           earlyExitBy: att.isEarlyExit ? `${att.earlyExitMinutes}m` : '--',
+          isLateExit: att.isLateExit ? 'Yes' : 'No',
+          lateExitBy: att.isLateExit ? `${att.lateExitMinutes}m` : '--',
           isOvertime: att.isOvertime ? 'Yes' : 'No',
           overtime: att.isOvertime ? `${att.overtimeMinutes}m` : '--',
           sessionsCount: att.sessions.length,
@@ -132,6 +134,8 @@ exports.getDateWiseReport = async (req, res) => {
           lateBy: '--',
           isEarlyExit: 'No',
           earlyExitBy: '--',
+          isLateExit: 'No',
+          lateExitBy: '--',
           isOvertime: 'No',
           overtime: '--',
           sessionsCount: 0,
@@ -209,6 +213,8 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
     let halfDays = 0;
     let lateArrivals = 0;
     let earlyArrivals = 0;
+    let lateExits = 0;
+    let earlyExits = 0;
     let totalWorkingMinutes = 0;
     let totalOvertimeMinutes = 0;
     const dailyRecords = [];
@@ -259,6 +265,14 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
           lateBy = att.lateByMinutes;
         }
 
+        if (att.isLateExit) {
+          lateExits++;
+        }
+
+        if (att.isEarlyExit) {
+          earlyExits++;
+        }
+
         if (att.isOvertime) {
           totalOvertimeMinutes += (att.overtimeMinutes || 0);
           overtime = att.overtimeMinutes;
@@ -293,6 +307,10 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         isEarlyIn: att && att.isEarlyIn ? true : false,
         earlyBy: att && att.isEarlyIn && att.earlyByMinutes ? `${att.earlyByMinutes}m` : '--',
         lateBy: lateBy > 0 ? `${lateBy}m` : '--',
+        isEarlyExit: att && att.isEarlyExit ? true : false,
+        earlyExitBy: att && att.isEarlyExit && att.earlyExitMinutes ? `${att.earlyExitMinutes}m` : '--',
+        isLateExit: att && att.isLateExit ? true : false,
+        lateExitBy: att && att.isLateExit && att.lateExitMinutes ? `${att.lateExitMinutes}m` : '--',
         overtime: overtime > 0 ? `${overtime}m` : '--',
         isManual: att ? (att.isManualCorrection ? 'Yes' : 'No') : 'No'
       });
@@ -335,6 +353,8 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         halfDays,
         lateArrivals,
         earlyArrivals,
+        lateExits,
+        earlyExits,
         totalWorkingMinutes,
         totalWorkingHours: formatMinutes(totalWorkingMinutes),
         averageWorkingMinutes,
