@@ -11,7 +11,19 @@ if (fs.existsSync(indexHtml)) {
   fs.copyFileSync(indexHtml, path.join(dist, '404.html'));
 
   // 2. Create physical route directories for direct URL navigation
-  const routes = ['kiosk', 'login', 'dashboard', 'attendance', 'employees', 'reports', 'settings'];
+  const routes = [
+    'kiosk',
+    'login',
+    'dashboard',
+    'attendance',
+    'employees',
+    'reports',
+    'settings',
+    'my-attendance',
+    'date-wise',
+    'monthly',
+    'raw-scans'
+  ];
   for (const r of routes) {
     const routeDir = path.join(dist, r);
     if (!fs.existsSync(routeDir)) {
