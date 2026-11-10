@@ -19,18 +19,18 @@ function parseTimeToDate(dateStr, timeStr) {
  */
 function recalculateAttendance(attendanceDoc, settings, employee = null) {
   const {
-    officeStartTime = '09:00',
-    officeEndTime = '18:00',
+    officeStartTime = '10:00',
+    officeEndTime = '19:00',
     gracePeriodMinutes = 15,
-    expectedWorkingHours = 8,
+    expectedWorkingHours = 9,
     halfDayThresholdHours = 4,
-    overtimeThresholdHours = 8.5,
+    overtimeThresholdHours = 9.5,
     // Male specific
-    maleExpectedWorkingHours = 8,
-    maleOfficeStartTime = '09:00',
-    maleOfficeEndTime = '18:00',
+    maleExpectedWorkingHours = 9,
+    maleOfficeStartTime = '10:00',
+    maleOfficeEndTime = '19:00',
     maleHalfDayThresholdHours = 4,
-    maleOvertimeThresholdHours = 8.5,
+    maleOvertimeThresholdHours = 9.5,
     // Female specific
     femaleExpectedWorkingHours = 7,
     femaleOfficeStartTime = '09:30',
@@ -57,11 +57,11 @@ function recalculateAttendance(attendanceDoc, settings, employee = null) {
     targetHalfDayHours = femaleHalfDayThresholdHours || (targetExpectedHours / 2) || 3.5;
     targetOvertimeThreshold = femaleOvertimeThresholdHours || (targetExpectedHours + 0.5) || 7.5;
   } else {
-    targetExpectedHours = customHours || maleExpectedWorkingHours || expectedWorkingHours || 8;
-    targetOfficeStart = maleOfficeStartTime || officeStartTime || '09:00';
-    targetOfficeEnd = maleOfficeEndTime || officeEndTime || '18:00';
-    targetHalfDayHours = maleHalfDayThresholdHours || halfDayThresholdHours || 4;
-    targetOvertimeThreshold = maleOvertimeThresholdHours || overtimeThresholdHours || 8.5;
+    targetExpectedHours = customHours || maleExpectedWorkingHours || expectedWorkingHours || 9;
+    targetOfficeStart = maleOfficeStartTime || officeStartTime || '10:00';
+    targetOfficeEnd = maleOfficeEndTime || officeEndTime || '19:00';
+    targetHalfDayHours = maleHalfDayThresholdHours || halfDayThresholdHours || 4.5;
+    targetOvertimeThreshold = maleOvertimeThresholdHours || overtimeThresholdHours || 9.5;
   }
 
   // Persist resolved duty hours & gender

@@ -26,18 +26,18 @@ import {
 export default function Settings() {
   const [settings, setSettings] = useState({
     companyName: 'Arshi Enterprises',
-    officeStartTime: '09:00',
-    officeEndTime: '18:00',
+    officeStartTime: '10:00',
+    officeEndTime: '19:00',
     gracePeriodMinutes: 15,
-    expectedWorkingHours: 8,
-    halfDayThresholdHours: 4,
-    overtimeThresholdHours: 8.5,
+    expectedWorkingHours: 9,
+    halfDayThresholdHours: 4.5,
+    overtimeThresholdHours: 9.5,
     // Male duty hour settings
-    maleExpectedWorkingHours: 8,
-    maleOfficeStartTime: '09:00',
-    maleOfficeEndTime: '18:00',
-    maleHalfDayThresholdHours: 4,
-    maleOvertimeThresholdHours: 8.5,
+    maleExpectedWorkingHours: 9,
+    maleOfficeStartTime: '10:00',
+    maleOfficeEndTime: '19:00',
+    maleHalfDayThresholdHours: 4.5,
+    maleOvertimeThresholdHours: 9.5,
     // Female duty hour settings
     femaleExpectedWorkingHours: 7,
     femaleOfficeStartTime: '09:30',

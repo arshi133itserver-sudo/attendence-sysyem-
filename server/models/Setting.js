@@ -7,11 +7,11 @@ const SettingSchema = new mongoose.Schema({
   },
   officeStartTime: {
     type: String,
-    default: '09:00' // HH:mm
+    default: '10:00' // HH:mm
   },
   officeEndTime: {
     type: String,
-    default: '18:00' // HH:mm
+    default: '19:00' // HH:mm
   },
   gracePeriodMinutes: {
     type: Number,
@@ -36,11 +36,11 @@ const SettingSchema = new mongoose.Schema({
   },
   maleOfficeStartTime: {
     type: String,
-    default: '09:00'
+    default: '10:00'
   },
   maleOfficeEndTime: {
     type: String,
-    default: '18:00'
+    default: '19:00'
   },
   maleHalfDayThresholdHours: {
     type: Number,
