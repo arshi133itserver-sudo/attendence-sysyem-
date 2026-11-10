@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const Setting = require('../models/Setting');
 const AuditLog = require('../models/AuditLog');
 const RawScanLog = require('../models/RawScanLog');
+const Holiday = require('../models/Holiday');
 const { recalculateAttendance, formatMinutes } = require('../services/attendanceCalculator');
 const { getLocalDateString } = require('../utils/dateUtils');
 
@@ -251,7 +252,7 @@ exports.getAttendanceByDate = async (req, res) => {
   }
 };
 
-// Manual Attendance Entry / Check-in / Check-out by Admin
+// Manual Attendance Entry / Check-in / Check-out / Holiday by Admin
 exports.manualAttendanceEntry = async (req, res) => {
   try {
     const { employeeId, date, type, timestamp, inTime, outTime, reason = 'Manual entry by Admin' } = req.body;
@@ -260,123 +261,181 @@ exports.manualAttendanceEntry = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Employee is required.' });
     }
 
-    // Support both MongoDB _id and custom employeeId (e.g. ARS-001)
-    let employee = null;
-    if (employeeId.match(/^[0-9a-fA-F]{24}$/)) {
-      employee = await Employee.findById(employeeId);
-    }
-    if (!employee) {
-      employee = await Employee.findOne({ employeeId });
-    }
-    if (!employee) {
-      return res.status(404).json({ success: false, message: 'Employee not found.' });
+    const normalizedType = (type || 'FULL_DAY').toUpperCase();
+    const isAllEmployees = employeeId === 'ALL' || employeeId === 'ALL_EMPLOYEES';
+
+    let targetEmployees = [];
+    if (isAllEmployees) {
+      targetEmployees = await Employee.find({ status: 'Active' });
+      if (targetEmployees.length === 0) {
+        return res.status(404).json({ success: false, message: 'No active employees found.' });
+      }
+    } else {
+      let emp = null;
+      if (employeeId.match(/^[0-9a-fA-F]{24}$/)) {
+        emp = await Employee.findById(employeeId);
+      }
+      if (!emp) {
+        emp = await Employee.findOne({ employeeId });
+      }
+      if (!emp) {
+        return res.status(404).json({ success: false, message: 'Employee not found.' });
+      }
+      targetEmployees = [emp];
     }
 
     const entryTime = timestamp ? new Date(timestamp) : new Date();
     const entryDate = date || getLocalDateString(entryTime);
-
     const setting = (await Setting.findOne()) || {};
-    let attendance = await Attendance.findOne({ employee: employee._id, date: entryDate });
 
-    if (!attendance) {
-      attendance = new Attendance({
-        employee: employee._id,
-        date: entryDate,
-        sessions: []
-      });
+    // If marking as Holiday, also register in Holiday collection so it shows across all views
+    if (normalizedType === 'HOLIDAY') {
+      try {
+        const existingHoliday = await Holiday.findOne({ date: entryDate });
+        if (!existingHoliday) {
+          const isSun = new Date(`${entryDate}T12:00:00+05:30`).getDay() === 0;
+          await Holiday.create({
+            name: reason || (isSun ? 'Sunday Holiday' : 'Company Holiday'),
+            date: entryDate,
+            type: 'Company',
+            description: reason || 'Marked as Holiday by Admin via Manual Entry'
+          });
+        }
+      } catch (_) {}
     }
 
-    const sessions = attendance.sessions;
-    const normalizedType = (type || 'FULL_DAY').toUpperCase();
+    const results = [];
 
-    if (normalizedType === 'FULL_DAY' || (inTime && outTime)) {
-      const inD = inTime ? new Date(inTime) : new Date(`${entryDate}T09:00:00`);
-      let outD = outTime ? new Date(outTime) : new Date(`${entryDate}T18:00:00`);
+    for (const employee of targetEmployees) {
+      let attendance = await Attendance.findOne({ employee: employee._id, date: entryDate });
 
-      // 12-hour to 24-hour auto adjustment if user entered 6:00 instead of 18:00
-      if (outD <= inD) {
-        const potentialOut = new Date(outD.getTime() + 12 * 60 * 60 * 1000);
-        if (potentialOut > inD && (potentialOut.getTime() - inD.getTime()) <= 16 * 60 * 60 * 1000) {
-          outD = potentialOut;
-        }
+      if (!attendance) {
+        attendance = new Attendance({
+          employee: employee._id,
+          date: entryDate,
+          sessions: []
+        });
       }
 
-      // Replace or set the main session
-      attendance.sessions = [{
-        inTime: inD,
-        outTime: outD,
-        inDeviceId: 'MANUAL_ADMIN',
-        outDeviceId: 'MANUAL_ADMIN',
-        durationMinutes: Math.max(0, Math.round((outD - inD) / 60000))
-      }];
-    } else if (normalizedType === 'IN') {
-      sessions.push({
-        inTime: entryTime,
-        outTime: null,
-        inDeviceId: 'MANUAL_ADMIN',
-        durationMinutes: 0
-      });
-    } else if (normalizedType === 'OUT') {
-      let finalOutTime = entryTime;
-      if (sessions.length > 0) {
-        const lastSession = sessions[sessions.length - 1];
-        const lastInTime = new Date(lastSession.inTime);
+      if (normalizedType === 'HOLIDAY' || normalizedType === 'WEEKEND') {
+        attendance.sessions = [];
+        attendance.firstInTime = null;
+        attendance.lastOutTime = null;
+        attendance.totalWorkingMinutes = 0;
+        attendance.breakMinutes = 0;
+        attendance.status = normalizedType === 'HOLIDAY' ? 'Holiday' : 'Weekend';
+        attendance.isLate = false;
+        attendance.isEarlyIn = false;
+        attendance.isEarlyExit = false;
+        attendance.isLateExit = false;
+        attendance.isOvertime = false;
+      } else if (normalizedType === 'ABSENT') {
+        attendance.sessions = [];
+        attendance.firstInTime = null;
+        attendance.lastOutTime = null;
+        attendance.totalWorkingMinutes = 0;
+        attendance.breakMinutes = 0;
+        attendance.status = 'Absent';
+        attendance.isLate = false;
+        attendance.isEarlyIn = false;
+        attendance.isEarlyExit = false;
+        attendance.isLateExit = false;
+        attendance.isOvertime = false;
+      } else if (normalizedType === 'FULL_DAY' || (inTime && outTime)) {
+        const inD = inTime ? new Date(inTime) : new Date(`${entryDate}T09:00:00`);
+        let outD = outTime ? new Date(outTime) : new Date(`${entryDate}T18:00:00`);
 
-        // Auto adjust 12-hour entered time (e.g., 06:00 AM -> 06:00 PM / 18:00)
-        if (finalOutTime <= lastInTime) {
-          const adjustedOut = new Date(finalOutTime.getTime() + 12 * 60 * 60 * 1000);
-          if (adjustedOut > lastInTime && (adjustedOut.getTime() - lastInTime.getTime()) <= 16 * 60 * 60 * 1000) {
-            finalOutTime = adjustedOut;
+        if (outD <= inD) {
+          const potentialOut = new Date(outD.getTime() + 12 * 60 * 60 * 1000);
+          if (potentialOut > inD && (potentialOut.getTime() - inD.getTime()) <= 16 * 60 * 60 * 1000) {
+            outD = potentialOut;
           }
         }
 
-        lastSession.outTime = finalOutTime;
-        lastSession.outDeviceId = 'MANUAL_ADMIN';
-      } else {
-        // If no prior session exists on this date, create a default session starting at 09:00 AM
-        const defaultInTime = new Date(`${entryDate}T09:00:00`);
-        let outD = finalOutTime;
-        if (outD <= defaultInTime) {
-          const adjustedOut = new Date(outD.getTime() + 12 * 60 * 60 * 1000);
-          if (adjustedOut > defaultInTime) outD = adjustedOut;
-        }
-        sessions.push({
-          inTime: defaultInTime,
+        attendance.sessions = [{
+          inTime: inD,
           outTime: outD,
           inDeviceId: 'MANUAL_ADMIN',
           outDeviceId: 'MANUAL_ADMIN',
-          durationMinutes: Math.max(0, Math.round((outD - defaultInTime) / 60000))
+          durationMinutes: Math.max(0, Math.round((outD - inD) / 60000))
+        }];
+        recalculateAttendance(attendance, setting, employee);
+      } else if (normalizedType === 'IN') {
+        attendance.sessions.push({
+          inTime: entryTime,
+          outTime: null,
+          inDeviceId: 'MANUAL_ADMIN',
+          durationMinutes: 0
         });
+        recalculateAttendance(attendance, setting, employee);
+      } else if (normalizedType === 'OUT') {
+        let finalOutTime = entryTime;
+        if (attendance.sessions.length > 0) {
+          const lastSession = attendance.sessions[attendance.sessions.length - 1];
+          const lastInTime = new Date(lastSession.inTime);
+          if (finalOutTime <= lastInTime) {
+            const adjustedOut = new Date(finalOutTime.getTime() + 12 * 60 * 60 * 1000);
+            if (adjustedOut > lastInTime && (adjustedOut.getTime() - lastInTime.getTime()) <= 16 * 60 * 60 * 1000) {
+              finalOutTime = adjustedOut;
+            }
+          }
+          lastSession.outTime = finalOutTime;
+          lastSession.outDeviceId = 'MANUAL_ADMIN';
+        } else {
+          const defaultInTime = new Date(`${entryDate}T09:00:00`);
+          let outD = finalOutTime;
+          if (outD <= defaultInTime) {
+            const adjustedOut = new Date(outD.getTime() + 12 * 60 * 60 * 1000);
+            if (adjustedOut > defaultInTime) outD = adjustedOut;
+          }
+          attendance.sessions.push({
+            inTime: defaultInTime,
+            outTime: outD,
+            inDeviceId: 'MANUAL_ADMIN',
+            outDeviceId: 'MANUAL_ADMIN',
+            durationMinutes: Math.max(0, Math.round((outD - defaultInTime) / 60000))
+          });
+        }
+        recalculateAttendance(attendance, setting, employee);
       }
+
+      attendance.isManualCorrection = true;
+      attendance.correctionReason = reason;
+      attendance.correctedBy = req.user._id;
+
+      attendance.auditHistory.push({
+        modifiedAt: new Date(),
+        modifiedBy: req.user._id,
+        action: `MANUAL_${normalizedType}`,
+        reason,
+        snapshot: { type: normalizedType, entryTime, entryDate }
+      });
+
+      await attendance.save();
+      results.push(attendance);
     }
-
-    attendance.isManualCorrection = true;
-    attendance.correctionReason = reason;
-    attendance.correctedBy = req.user._id;
-
-    attendance.auditHistory.push({
-      modifiedAt: new Date(),
-      modifiedBy: req.user._id,
-      action: `MANUAL_${normalizedType}`,
-      reason,
-      snapshot: { type: normalizedType, entryTime, entryDate }
-    });
-
-    recalculateAttendance(attendance, setting, employee);
-    await attendance.save();
 
     await AuditLog.create({
       action: `MANUAL_ATTENDANCE_${normalizedType}`,
       entity: 'Attendance',
-      entityId: attendance._id.toString(),
       performedBy: req.user._id,
-      details: { employeeId: employee.employeeId, type: normalizedType, entryTime, entryDate },
+      details: {
+        target: isAllEmployees ? 'ALL_EMPLOYEES' : targetEmployees[0]?.employeeId,
+        count: targetEmployees.length,
+        type: normalizedType,
+        entryDate
+      },
       reason
     });
 
     return res.status(200).json({
       success: true,
-      message: `Manual ${normalizedType} recorded for ${employee.fullName}. Working hours: ${formatMinutes(attendance.totalWorkingMinutes)}.`,
+      message: isAllEmployees
+        ? `Marked ${normalizedType} for all ${targetEmployees.length} staff on ${entryDate}.`
+        : `Manual ${normalizedType} recorded for ${targetEmployees[0].fullName}.`,
+      count: targetEmployees.length,
+      data: results.length === 1 ? results[0] : results
+    });
       data: attendance
     });
   } catch (error) {

@@ -110,7 +110,15 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
 
     try {
       if (mode === 'manual') {
-        if (manualType === 'FULL_DAY') {
+        if (manualType === 'HOLIDAY') {
+          // Mark Holiday
+          await attendanceApi.manualEntry({
+            employeeId: selectedEmployeeId,
+            date,
+            type: 'HOLIDAY',
+            reason: reason || (isSunday ? 'Sunday / Weekly Holiday' : 'Company Holiday')
+          });
+        } else if (manualType === 'FULL_DAY') {
           // Send full day entry
           await attendanceApi.manualEntry({
             employeeId: selectedEmployeeId,
@@ -133,7 +141,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
       } else {
         // Correction workflow
         const sessions = [];
-        if (inTimeStr) {
+        if (inTimeStr && status !== 'Holiday' && status !== 'Weekend' && status !== 'Absent') {
           sessions.push({
             inTime: new Date(`${date}T${inTimeStr}:00`),
             outTime: outTimeStr ? new Date(`${date}T${outTimeStr}:00`) : null,
@@ -164,6 +172,8 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
   const calculatedHours = (mode === 'manual' && manualType === 'FULL_DAY') || mode === 'correct'
     ? calculateWorkingHoursDisplay(inTimeStr, outTimeStr)
     : null;
+
+  const isSunday = Boolean(date && new Date(`${date}T12:00:00`).getDay() === 0);
 
   if (!isOpen) return null;
 
@@ -214,6 +224,9 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
               required
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
             >
+              {mode === 'manual' && (
+                <option value="ALL">🌟 All Active Staff (सभी कर्मचारी)</option>
+              )}
               <option value="">Select Employee...</option>
               {employees.map((emp) => (
                 <option key={emp._id} value={emp._id}>
@@ -225,13 +238,27 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
 
           {/* Date */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Date
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Date
+              </label>
+              {isSunday && (
+                <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                  📅 Sunday (Weekly Holiday)
+                </span>
+              )}
+            </div>
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                const newD = e.target.value;
+                setDate(newD);
+                const isSun = new Date(`${newD}T12:00:00`).getDay() === 0;
+                if (isSun && mode === 'manual' && manualType !== 'HOLIDAY') {
+                  setReason('Sunday / Weekly Holiday');
+                }
+              }}
               required
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
             />
@@ -242,7 +269,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Entry Mode
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
                   onClick={() => setManualType('FULL_DAY')}
@@ -252,7 +279,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  Full Shift (IN + OUT)
+                  Full Shift
                 </button>
                 <button
                   type="button"
@@ -276,12 +303,41 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                 >
                   Clock OUT Only
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualType('HOLIDAY');
+                    setReason(isSunday ? 'Sunday / Weekly Holiday' : 'Company Holiday');
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    manualType === 'HOLIDAY'
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20'
+                      : 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                  }`}
+                >
+                  🏖️ Mark Holiday
+                </button>
               </div>
             </div>
           )}
 
-          {/* Time pickers based on mode */}
-          {(mode === 'correct' || (mode === 'manual' && manualType === 'FULL_DAY')) ? (
+          {/* Holiday Information Banner in Manual Mode */}
+          {mode === 'manual' && manualType === 'HOLIDAY' && (
+            <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-xs space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-purple-700 dark:text-purple-300">
+                <Calendar className="w-4 h-4 shrink-0" />
+                <span>Marking Holiday {selectedEmployeeId === 'ALL' ? 'for All Active Staff' : 'for Selected Staff'}</span>
+              </div>
+              <p className="text-[11px] text-purple-600 dark:text-purple-400 leading-relaxed">
+                {isSunday
+                  ? 'Selected date is a Sunday. This will record a Sunday / Weekly Holiday entry for all attendance reports without requiring punch timings.'
+                  : 'Selected date will be recorded as a Holiday without requiring punch timings.'}
+              </p>
+            </div>
+          )}
+
+          {/* Time pickers based on mode (hidden when marking Holiday) */}
+          {manualType !== 'HOLIDAY' && (mode === 'correct' || (mode === 'manual' && manualType === 'FULL_DAY')) ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -321,7 +377,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                 </div>
               )}
             </div>
-          ) : (
+          ) : manualType !== 'HOLIDAY' ? (
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 {manualType === 'IN' ? 'Punch IN Time' : 'Punch OUT Time'}
@@ -334,7 +390,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
               />
             </div>
-          )}
+          ) : null}
 
           {mode === 'correct' && (
             <div>
@@ -346,10 +402,12 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
               >
-                <option value="Present">Present</option>
-                <option value="Late">Late</option>
-                <option value="Half-Day">Half-Day</option>
-                <option value="Absent">Absent</option>
+                <option value="Present">Present (उपस्थित)</option>
+                <option value="Late">Late (विलंब)</option>
+                <option value="Half-Day">Half-Day (आधा दिन)</option>
+                <option value="Absent">Absent (अनुपस्थित)</option>
+                <option value="Holiday">Holiday (छुट्टी)</option>
+                <option value="Weekend">Weekend (रविवार / साप्ताहिक अवकाश)</option>
               </select>
             </div>
           )}

@@ -185,7 +185,11 @@ function recalculateAttendance(attendanceDoc, settings, employee = null) {
   // Determine overall status using gender-specific targetHalfDayHours
   const halfDayMinutes = targetHalfDayHours * 60;
   if (totalWorkingMinutes === 0) {
-    attendanceDoc.status = attendanceDoc.isLate ? 'Late' : 'Present';
+    if (attendanceDoc.status === 'Holiday' || attendanceDoc.status === 'Weekend' || attendanceDoc.status === 'Absent') {
+      // Preserve explicit Holiday / Weekend / Absent status
+    } else {
+      attendanceDoc.status = attendanceDoc.isLate ? 'Late' : 'Present';
+    }
   } else if (totalWorkingMinutes < halfDayMinutes) {
     attendanceDoc.status = 'Half-Day';
   } else if (attendanceDoc.isLate) {

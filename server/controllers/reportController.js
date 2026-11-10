@@ -55,11 +55,19 @@ exports.getDateWiseReport = async (req, res) => {
       attMap.set(att.employee._id.toString(), att);
     });
 
+    // Check if the requested date is a Sunday, weekly off, or registered holiday
+    const dayOfWeek = new Date(`${date}T12:00:00+05:30`).getDay();
+    const isSunday = dayOfWeek === 0;
+    const isWeeklyOff = (setting.weeklyHolidays || [0]).includes(dayOfWeek);
+    const holidayRecord = await Holiday.findOne({ date });
+    const isHoliday = !!holidayRecord;
+    const defaultNonWorkingStatus = (isSunday || isWeeklyOff || isHoliday) ? 'Holiday' : 'Absent';
+
     const report = employees.map(emp => {
       const att = attMap.get(emp._id.toString());
       const defaultExpectedHours = emp.customWorkingHours || (emp.gender === 'Female' ? (setting.femaleExpectedWorkingHours || 7) : (setting.maleExpectedWorkingHours || 8));
 
-      if (att && att.sessions && att.sessions.length > 0) {
+      if (att && (att.sessions?.length > 0 || att.status === 'Holiday' || att.status === 'Weekend')) {
         return {
           _id: att._id,
           attendanceId: att._id,
@@ -78,12 +86,12 @@ exports.getDateWiseReport = async (req, res) => {
           designation: emp.designation,
           expectedWorkingHours: att.expectedWorkingHours || defaultExpectedHours,
           date,
-          status: att.status,
+          status: att.status || defaultNonWorkingStatus,
           inTime: formatTime(att.firstInTime),
           outTime: formatTime(att.lastOutTime),
           firstInRaw: att.firstInTime,
           lastOutRaw: att.lastOutTime,
-          sessions: att.sessions,
+          sessions: att.sessions || [],
           totalWorkingMinutes: att.totalWorkingMinutes || 0,
           totalWorkingHours: formatMinutes(att.totalWorkingMinutes || 0),
           breakDuration: formatMinutes(att.breakMinutes || 0),
@@ -97,13 +105,15 @@ exports.getDateWiseReport = async (req, res) => {
           lateExitBy: att.isLateExit ? `${att.lateExitMinutes}m` : '--',
           isOvertime: att.isOvertime ? 'Yes' : 'No',
           overtime: att.isOvertime ? `${att.overtimeMinutes}m` : '--',
-          sessionsCount: att.sessions.length,
+          sessionsCount: (att.sessions || []).length,
           isManualCorrection: att.isManualCorrection ? 'Yes' : 'No'
         };
       } else {
+        const existingStatus = att?.status;
+        const nonWorkingStatus = (existingStatus && existingStatus !== 'Present') ? existingStatus : defaultNonWorkingStatus;
         return {
-          _id: null,
-          attendanceId: null,
+          _id: att ? att._id : null,
+          attendanceId: att ? att._id : null,
           employeeDbId: emp._id,
           employee: {
             _id: emp._id,
@@ -119,15 +129,15 @@ exports.getDateWiseReport = async (req, res) => {
           designation: emp.designation,
           expectedWorkingHours: defaultExpectedHours,
           date,
-          status: 'Absent',
+          status: nonWorkingStatus,
           inTime: '--:--',
           outTime: '--:--',
           firstInRaw: null,
           lastOutRaw: null,
           sessions: [],
           totalWorkingMinutes: 0,
-          totalWorkingHours: '0h 00m',
-          breakDuration: '0h 00m',
+          totalWorkingHours: '0h 0m',
+          breakDuration: '0h 0m',
           isEarlyIn: 'No',
           earlyInBy: '--',
           isLate: 'No',
@@ -139,7 +149,7 @@ exports.getDateWiseReport = async (req, res) => {
           isOvertime: 'No',
           overtime: '--',
           sessionsCount: 0,
-          isManualCorrection: 'No'
+          isManualCorrection: att?.isManualCorrection ? 'Yes' : 'No'
         };
       }
     });
