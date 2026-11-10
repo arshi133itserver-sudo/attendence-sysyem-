@@ -50,6 +50,25 @@ const EmployeeSchema = new mongoose.Schema({
     default: 'Male',
     index: true
   },
+  dob: {
+    type: Date,
+    default: null
+  },
+  bloodGroup: {
+    type: String,
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown', ''],
+    default: ''
+  },
+  emergencyContact: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  address: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   customWorkingHours: {
     type: Number,
     default: null

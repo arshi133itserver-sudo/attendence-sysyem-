@@ -367,8 +367,18 @@ function OfficialArshiIdCardFront({ emp, isPrint = false }) {
           <div className="grid grid-cols-[82px_10px_1fr] items-center">
             <span className="text-[#1e293b]">Blood Group</span>
             <span className="text-center font-bold">:</span>
-            <span className="font-bold text-red-600">B+</span>
+            <span className="font-bold text-red-600">{emp.bloodGroup || 'B+'}</span>
           </div>
+
+          {emp.dob && (
+            <div className="grid grid-cols-[82px_10px_1fr] items-center">
+              <span className="text-[#1e293b]">D.O.B</span>
+              <span className="text-center font-bold">:</span>
+              <span className="font-mono text-[11px] font-bold text-slate-800">
+                {new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(emp.dob))}
+              </span>
+            </div>
+          )}
 
           {rfid && rfid !== 'UNASSIGNED' && (
             <div className="grid grid-cols-[82px_10px_1fr] items-center">

@@ -110,6 +110,10 @@ exports.createEmployee = async (req, res) => {
       department,
       designation,
       joiningDate,
+      dob,
+      bloodGroup,
+      emergencyContact,
+      address,
       salary,
       gender,
       customWorkingHours,
@@ -162,6 +166,10 @@ exports.createEmployee = async (req, res) => {
       department: department.trim(),
       designation: designation.trim(),
       joiningDate: joiningDate || Date.now(),
+      dob: dob || null,
+      bloodGroup: bloodGroup ? String(bloodGroup).trim() : '',
+      emergencyContact: emergencyContact ? String(emergencyContact).trim() : '',
+      address: address ? String(address).trim() : '',
       salary: salary ? Number(salary) : 0,
       gender: gender === 'Female' ? 'Female' : 'Male',
       customWorkingHours: customWorkingHours ? Number(customWorkingHours) : null,
@@ -241,6 +249,10 @@ exports.updateEmployee = async (req, res) => {
       department,
       designation,
       joiningDate,
+      dob,
+      bloodGroup,
+      emergencyContact,
+      address,
       salary,
       gender,
       customWorkingHours,
@@ -317,6 +329,10 @@ exports.updateEmployee = async (req, res) => {
     if (department) employee.department = department.trim();
     if (designation) employee.designation = designation.trim();
     if (joiningDate) employee.joiningDate = joiningDate;
+    if (dob !== undefined) employee.dob = dob || null;
+    if (bloodGroup !== undefined) employee.bloodGroup = bloodGroup ? String(bloodGroup).trim() : '';
+    if (emergencyContact !== undefined) employee.emergencyContact = emergencyContact ? String(emergencyContact).trim() : '';
+    if (address !== undefined) employee.address = address ? String(address).trim() : '';
     if (salary !== undefined) employee.salary = Number(salary);
     if (gender) employee.gender = gender;
     if (customWorkingHours !== undefined) employee.customWorkingHours = customWorkingHours ? Number(customWorkingHours) : null;

@@ -49,6 +49,10 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
     department: '',
     designation: '',
     gender: 'Male',
+    dob: '',
+    bloodGroup: '',
+    emergencyContact: '',
+    address: '',
     customWorkingHours: '',
     joiningDate: new Date().toISOString().split('T')[0],
     salary: 0,
@@ -91,6 +95,10 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
           department: employeeToEdit.department || '',
           designation: employeeToEdit.designation || '',
           gender: employeeToEdit.gender || 'Male',
+          dob: employeeToEdit.dob ? employeeToEdit.dob.slice(0, 10) : '',
+          bloodGroup: employeeToEdit.bloodGroup || '',
+          emergencyContact: employeeToEdit.emergencyContact || '',
+          address: employeeToEdit.address || '',
           customWorkingHours: employeeToEdit.customWorkingHours || '',
           joiningDate: employeeToEdit.joiningDate ? employeeToEdit.joiningDate.slice(0, 10) : new Date().toISOString().split('T')[0],
           salary: employeeToEdit.salary || 0,
@@ -115,6 +123,10 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
           department: '',
           designation: '',
           gender: 'Male',
+          dob: '',
+          bloodGroup: '',
+          emergencyContact: '',
+          address: '',
           customWorkingHours: '',
           joiningDate: new Date().toISOString().split('T')[0],
           salary: 50000,
@@ -414,6 +426,82 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                 Machine User PIN / ID for Finger/Face/Card.
               </p>
+            </div>
+          </div>
+
+          {/* Personal & Medical/Health Details: DOB, Blood Group, Emergency Contact */}
+          <div className="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/60 space-y-3">
+            <h4 className="text-xs font-bold text-rose-950 dark:text-rose-200 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🩸 Personal Details & Blood Group (जन्म तिथि व ब्लड ग्रुप)</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Date of Birth */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Date of Birth (जन्म तिथि)
+                </label>
+                <input
+                  type="date"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Blood Group */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Blood Group (रक्त समूह)
+                </label>
+                <select
+                  name="bloodGroup"
+                  value={formData.bloodGroup}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                >
+                  <option value="">Select Blood Group</option>
+                  <option value="A+">A+ (A Positive)</option>
+                  <option value="A-">A- (A Negative)</option>
+                  <option value="B+">B+ (B Positive)</option>
+                  <option value="B-">B- (B Negative)</option>
+                  <option value="O+">O+ (O Positive)</option>
+                  <option value="O-">O- (O Negative)</option>
+                  <option value="AB+">AB+ (AB Positive)</option>
+                  <option value="AB-">AB- (AB Negative)</option>
+                </select>
+              </div>
+
+              {/* Emergency Contact */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Emergency Mobile No.
+                </label>
+                <input
+                  type="text"
+                  name="emergencyContact"
+                  placeholder="+91 91990 59257"
+                  value={formData.emergencyContact}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                Residential Address (कर्मचारी का पता)
+              </label>
+              <input
+                type="text"
+                name="address"
+                placeholder="Village/Mohalla, Post, PS, Dist, State - Pincode"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              />
             </div>
           </div>
 
