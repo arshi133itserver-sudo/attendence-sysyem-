@@ -471,12 +471,63 @@ exports.createOrUpdateAccount = async (req, res) => {
   }
 };
 
-// Fetch and convert image from web URL (supports Google Drive, Dropbox, and direct image links)
+// Helper to extract image URL from HTML (Blogger post, WordPress, webpage)
+function extractImageFromWebpage(html, baseUrl) {
+  // 1. OpenGraph or Twitter Card meta image
+  const ogRegex = /<meta[^>]+(?:property|name)=["'](?:og:image|og:image:url|twitter:image)["'][^>]+content=["']([^"']+)["']/i;
+  const ogRegexReverse = /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|og:image:url|twitter:image)["']/i;
+  const ogMatch = html.match(ogRegex) || html.match(ogRegexReverse);
+  if (ogMatch && ogMatch[1] && !ogMatch[1].includes('b-logo') && !ogMatch[1].includes('favicon')) {
+    return ogMatch[1].trim();
+  }
+
+  // 2. <link rel="image_src" href="...">
+  const linkRegex = /<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i;
+  const linkMatch = html.match(linkRegex);
+  if (linkMatch && linkMatch[1]) {
+    return linkMatch[1].trim();
+  }
+
+  // 3. Blogger / Blogspot specific image patterns in post body
+  const bloggerPattern = /https?:\/\/(?:[0-9]\.bp\.blogspot\.com|blogger\.googleusercontent\.com|lh[0-9]+\.googleusercontent\.com)\/[^"'<>\s]+/i;
+  const bloggerMatch = html.match(bloggerPattern);
+  if (bloggerMatch && bloggerMatch[0]) {
+    return bloggerMatch[0].trim();
+  }
+
+  // 4. First valid <img> tag in the page
+  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let match;
+  while ((match = imgRegex.exec(html)) !== null) {
+    const src = match[1].trim();
+    if (src.includes('1x1') || src.includes('favicon') || src.includes('avatar') || src.includes('icon') || src.includes('emoji')) {
+      continue;
+    }
+    if (src.match(/\.(png|jpe?g|webp|gif)/i) || src.includes('googleusercontent') || src.includes('blogspot')) {
+      return src.startsWith('http') ? src : new URL(src, baseUrl).href;
+    }
+  }
+
+  return null;
+}
+
+// Helper to upgrade Blogger / Google Photos thumbnail resolution to /s1600/
+function upgradeBloggerImageUrl(imgUrl) {
+  if (imgUrl.includes('bp.blogspot.com') || imgUrl.includes('blogger.googleusercontent.com') || imgUrl.includes('googleusercontent.com')) {
+    // Replace /s72-c/, /s150/, /s200/, /s320/, /s400/, /s640/ with /s1600/
+    imgUrl = imgUrl.replace(/\/s(72-c|[0-9]{2,4})\//, '/s1600/');
+    // Replace /w\d+-h\d+/ with /s1600/
+    imgUrl = imgUrl.replace(/\/w[0-9]+-h[0-9]+[^/]*\//, '/s1600/');
+  }
+  return imgUrl;
+}
+
+// Fetch and convert image from web URL (supports Blogger, Blogspot, Google Drive, Dropbox, and direct image links)
 exports.fetchPhotoFromUrl = async (req, res) => {
   try {
     let { url } = req.body;
     if (!url || typeof url !== 'string') {
-      return res.status(400).json({ success: false, message: 'Image URL is required.' });
+      return res.status(400).json({ success: false, message: 'Image URL or Blogger link is required.' });
     }
 
     url = url.trim();
@@ -496,26 +547,67 @@ exports.fetchPhotoFromUrl = async (req, res) => {
       }
     }
 
-    // 3. Fetch the remote image
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
+    // 3. Upgrade direct Blogger / Blogspot image links to high resolution
+    url = upgradeBloggerImageUrl(url);
+
+    const standardHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+    };
+
+    // 4. Fetch the remote resource
+    let response = await fetch(url, {
+      headers: standardHeaders,
       signal: AbortSignal.timeout(12000)
     });
 
     if (!response.ok) {
       return res.status(400).json({
         success: false,
-        message: `Failed to fetch image from URL (HTTP ${response.status}: ${response.statusText}). Please verify the link is publicly accessible.`
+        message: `Failed to fetch URL (HTTP ${response.status}: ${response.statusText}). Please verify the link is publicly accessible.`
       });
     }
 
-    const contentType = response.headers.get('content-type') || '';
+    let contentType = response.headers.get('content-type') || '';
+    let isBloggerExtracted = false;
+
+    // 5. If response is HTML (e.g. Blogger / Blogspot post or webpage), extract the image from it
+    if (contentType.includes('text/html') || contentType.includes('application/xhtml')) {
+      const htmlText = await response.text();
+      const extractedImageUrl = extractImageFromWebpage(htmlText, url);
+
+      if (!extractedImageUrl) {
+        return res.status(400).json({
+          success: false,
+          message: 'No photo could be found on this Blogger page. Please ensure the blog post contains a picture or paste the direct image link.'
+        });
+      }
+
+      // Upgrade resolution of extracted image
+      const highResImageUrl = upgradeBloggerImageUrl(extractedImageUrl);
+
+      // Fetch the extracted image
+      response = await fetch(highResImageUrl, {
+        headers: standardHeaders,
+        signal: AbortSignal.timeout(12000)
+      });
+
+      if (!response.ok) {
+        return res.status(400).json({
+          success: false,
+          message: `Failed to download extracted Blogger image (${response.status}).`
+        });
+      }
+
+      contentType = response.headers.get('content-type') || 'image/jpeg';
+      url = highResImageUrl;
+      isBloggerExtracted = true;
+    }
+
     if (!contentType.startsWith('image/') && !contentType.includes('octet-stream')) {
       return res.status(400).json({
         success: false,
-        message: `The provided URL returned '${contentType}', not an image. Please provide a direct image link.`
+        message: `The provided URL returned '${contentType}', not an image. Please provide a direct image or Blogger link.`
       });
     }
 
@@ -526,7 +618,7 @@ exports.fetchPhotoFromUrl = async (req, res) => {
     if (buffer.length > 5 * 1024 * 1024) {
       return res.status(400).json({
         success: false,
-        message: 'The image at this URL exceeds 5MB. Please choose a smaller photo.'
+        message: 'The image exceeds 5MB. Please choose a smaller photo.'
       });
     }
 
@@ -535,9 +627,12 @@ exports.fetchPhotoFromUrl = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Photo successfully fetched from URL!',
+      message: isBloggerExtracted
+        ? 'Photo successfully extracted and fetched from Blogger!'
+        : 'Photo successfully fetched from URL!',
       photoData: base64Data,
-      resolvedUrl: url
+      resolvedUrl: url,
+      isBlogger: isBloggerExtracted || url.includes('blogspot') || url.includes('blogger')
     });
   } catch (error) {
     return res.status(500).json({

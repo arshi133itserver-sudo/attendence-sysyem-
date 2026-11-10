@@ -372,14 +372,19 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit, onSaved
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Google Drive, Dropbox, Imgur ya kisi photo ka web link paste karein:
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Blogger (Blogspot), Google Drive, Dropbox ya photo URL yahan paste karein:
+                      </p>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                        Blogger Supported
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <input
                         type="url"
-                        placeholder="https://drive.google.com/... or image URL"
+                        placeholder="https://... (Blogger post, Blogspot photo, or Drive link)"
                         value={photoUrlInput}
                         onChange={(e) => setPhotoUrlInput(e.target.value)}
                         onKeyDown={(e) => {
