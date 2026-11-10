@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { reportApi, employeeApi } from '../services/api';
-import { exportToExcel, exportMonthlyPdf } from '../services/exportService';
+import { exportToExcel, exportMonthlyExcel, exportMonthlyPdf } from '../services/exportService';
 import {
   FileSpreadsheet,
   FileText,
@@ -54,24 +54,12 @@ export default function MonthlyReport() {
 
   const handleExportExcel = () => {
     if (!reportData) return;
-    const { employee, summary, dailyRecords } = reportData;
-
-    const data = dailyRecords.map(r => ({
-      'Employee ID': employee.employeeId,
-      'Name': employee.fullName,
-      'Month': selectedMonth,
-      'Date': r.date,
-      'Day': r.day,
-      'Status': r.status,
-      'IN Time': r.inTime,
-      'OUT Time': r.outTime,
-      'Working Hours': r.workingHours,
-      'Late By': r.lateBy,
-      'Overtime': r.overtime,
-      'Manual Adjusted': r.isManual
-    }));
-
-    exportToExcel(data, `Monthly_Report_${employee.employeeId}_${selectedMonth}`, 'MonthlyAttendance');
+    exportMonthlyExcel(
+      reportData.employee,
+      selectedMonth,
+      reportData.summary,
+      reportData.dailyRecords
+    );
   };
 
   const handleExportPdf = () => {

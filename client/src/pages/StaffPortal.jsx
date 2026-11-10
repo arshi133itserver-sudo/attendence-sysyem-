@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { reportApi, attendanceApi } from '../services/api';
-import { exportToExcel, exportMonthlyPdf } from '../services/exportService';
+import { exportToExcel, exportMonthlyExcel, exportMonthlyPdf } from '../services/exportService';
 import StatsCard from '../components/StatsCard';
 import StaffIdCardModal from '../components/StaffIdCardModal';
 import SelfiePunchModal from '../components/SelfiePunchModal';
@@ -73,21 +73,12 @@ export default function StaffPortal({ onOpenSimulator }) {
 
   const handleExportExcel = () => {
     if (!reportData) return;
-    const { employee, dailyRecords } = reportData;
-    const data = dailyRecords.map(r => ({
-      'Employee ID': employee.employeeId,
-      'Name': employee.fullName,
-      'Month': selectedMonth,
-      'Date': r.date,
-      'Day': r.day,
-      'Status': r.status,
-      'IN Time': r.inTime,
-      'OUT Time': r.outTime,
-      'Working Hours': r.workingHours,
-      'Late By': r.lateBy,
-      'Overtime': r.overtime
-    }));
-    exportToExcel(data, `My_Portfolio_Attendance_${selectedMonth}`, 'MyAttendance');
+    exportMonthlyExcel(
+      reportData.employee,
+      selectedMonth,
+      reportData.summary,
+      reportData.dailyRecords
+    );
   };
 
   const handleExportPdf = () => {

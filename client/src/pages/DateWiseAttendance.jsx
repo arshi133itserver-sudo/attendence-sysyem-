@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { reportApi, attendanceApi } from '../services/api';
-import { exportToExcel, exportDateWisePdf } from '../services/exportService';
+import { exportToExcel, exportDateWiseExcel, exportDateWisePdf } from '../services/exportService';
 import AttendanceModal from '../components/AttendanceModal';
 import {
   Calendar,
@@ -52,28 +52,7 @@ export default function DateWiseAttendance() {
   }, [selectedDate, department, search]);
 
   const handleExportExcel = () => {
-    const exportData = records.map(r => ({
-      'Employee ID': r.employeeId,
-      'Full Name': r.fullName,
-      'Gender': r.gender || 'Male',
-      'Department': r.department,
-      'Designation': r.designation,
-      'Target Hours': `${r.expectedWorkingHours || 8}h`,
-      'Date': r.date,
-      'Status': r.status,
-      'IN Time': r.inTime,
-      'OUT Time': r.outTime,
-      'Working Hours': r.totalWorkingHours,
-      'Break Duration': r.breakDuration,
-      'Late Arrival': r.isLate,
-      'Late By': r.lateBy,
-      'Early Departure': r.isEarlyExit,
-      'Early By': r.earlyExitBy,
-      'Overtime': r.overtime,
-      'Sessions': r.sessionsCount,
-      'Manual Correction': r.isManualCorrection
-    }));
-    exportToExcel(exportData, `Arshi_Attendance_${selectedDate}`, 'DateReport');
+    exportDateWiseExcel(records, selectedDate, department);
   };
 
   const handleExportPdf = () => {
