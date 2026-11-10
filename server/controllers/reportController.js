@@ -184,7 +184,13 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
       }
     }
 
-    const employee = await Employee.findById(employeeId);
+    let employee = null;
+    if (employeeId.match(/^[0-9a-fA-F]{24}$/)) {
+      employee = await Employee.findById(employeeId);
+    }
+    if (!employee) {
+      employee = await Employee.findOne({ employeeId });
+    }
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
