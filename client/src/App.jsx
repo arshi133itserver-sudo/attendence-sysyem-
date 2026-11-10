@@ -56,9 +56,12 @@ function ProtectedLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
-        <Navbar onOpenSimulator={() => setIsSimulatorOpen(true)} />
+        <Navbar
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+          onOpenSimulator={() => setIsSimulatorOpen(true)}
+        />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto" key={refreshKey}>
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto" key={refreshKey}>
           <Routes>
             <Route
               path="/"
@@ -75,29 +78,29 @@ function ProtectedLayout() {
             />
             <Route
               path="/employees"
-              element={isAdmin ? <Employees /> : <Navigate to="/" replace />}
+              element={isAdmin ? <Employees /> : <Navigate to="/my-attendance" replace />}
             />
             <Route
               path="/date-wise"
-              element={<DateWiseAttendance />}
+              element={isAdmin ? <DateWiseAttendance /> : <Navigate to="/my-attendance" replace />}
             />
             <Route
               path="/monthly"
-              element={<MonthlyReport />}
+              element={isAdmin ? <MonthlyReport /> : <Navigate to="/my-attendance" replace />}
             />
             <Route
               path="/raw-scans"
-              element={isAdmin ? <RawScans /> : <Navigate to="/" replace />}
+              element={isAdmin ? <RawScans /> : <Navigate to="/my-attendance" replace />}
             />
             <Route
               path="/settings"
-              element={isAdmin ? <Settings /> : <Navigate to="/" replace />}
+              element={isAdmin ? <Settings /> : <Navigate to="/my-attendance" replace />}
             />
             <Route
               path="/my-attendance"
               element={<StaffPortal onOpenSimulator={() => setIsSimulatorOpen(true)} />}
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to={isAdmin ? "/" : "/my-attendance"} replace />} />
           </Routes>
         </main>
       </div>

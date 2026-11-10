@@ -19,12 +19,17 @@ exports.getDateWiseReport = async (req, res) => {
     }
 
     let empQuery = { status: 'Active' };
-    if (department && department !== 'All') {
-      empQuery.department = department;
-    }
-    if (search) {
-      const regex = new RegExp(search.trim(), 'i');
-      empQuery.$or = [{ fullName: regex }, { employeeId: regex }, { department: regex }];
+    if (req.user && req.user.role === 'staff') {
+      const staffEmpId = req.user.employee?._id || req.user.employee;
+      empQuery._id = staffEmpId;
+    } else {
+      if (department && department !== 'All') {
+        empQuery.department = department;
+      }
+      if (search) {
+        const regex = new RegExp(search.trim(), 'i');
+        empQuery.$or = [{ fullName: regex }, { employeeId: regex }, { department: regex }];
+      }
     }
 
     const employees = await Employee.find(empQuery).sort({ employeeId: 1 });
@@ -146,6 +151,17 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
     const { employeeId, month } = req.query; // month in format 'YYYY-MM'
     if (!employeeId || !month) {
       return res.status(400).json({ success: false, message: 'employeeId and month (YYYY-MM) are required.' });
+    }
+
+    // Security Check: Staff user can strictly ONLY view their own monthly report!
+    if (req.user && req.user.role === 'staff') {
+      const staffEmpId = String(req.user.employee?._id || req.user.employee);
+      if (String(employeeId) !== staffEmpId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own monthly attendance report.'
+        });
+      }
     }
 
     const employee = await Employee.findById(employeeId);
@@ -286,6 +302,12 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         gender: employee.gender || 'Male',
         department: employee.department,
         designation: employee.designation,
+        email: employee.email,
+        mobileNumber: employee.mobileNumber,
+        dob: employee.dob,
+        bloodGroup: employee.bloodGroup,
+        emergencyContact: employee.emergencyContact,
+        address: employee.address,
         joiningDate: employee.joiningDate,
         rfidCardUid: employee.rfidCardUid,
         profilePhoto: employee.profilePhoto

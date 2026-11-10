@@ -10,28 +10,34 @@ exports.getEmployees = async (req, res) => {
     const { search, department, status, gender, page, limit } = req.query;
     let query = {};
 
-    if (status && status !== 'All' && status !== 'undefined' && status !== 'null') {
-      query.status = status;
-    }
+    // Security Check: If staff, strictly ONLY return their own employee profile!
+    if (req.user && req.user.role === 'staff') {
+      const staffEmpId = req.user.employee?._id || req.user.employee;
+      query._id = staffEmpId;
+    } else {
+      if (status && status !== 'All' && status !== 'undefined' && status !== 'null') {
+        query.status = status;
+      }
 
-    if (department && department !== 'All' && department !== 'undefined' && department !== 'null') {
-      query.department = department;
-    }
+      if (department && department !== 'All' && department !== 'undefined' && department !== 'null') {
+        query.department = department;
+      }
 
-    if (gender && gender !== 'All' && gender !== 'undefined' && gender !== 'null') {
-      query.gender = gender;
-    }
+      if (gender && gender !== 'All' && gender !== 'undefined' && gender !== 'null') {
+        query.gender = gender;
+      }
 
-    if (search) {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { fullName: searchRegex },
-        { employeeId: searchRegex },
-        { email: searchRegex },
-        { mobileNumber: searchRegex },
-        { rfidCardUid: searchRegex },
-        { designation: searchRegex }
-      ];
+      if (search) {
+        const searchRegex = new RegExp(search.trim(), 'i');
+        query.$or = [
+          { fullName: searchRegex },
+          { employeeId: searchRegex },
+          { email: searchRegex },
+          { mobileNumber: searchRegex },
+          { rfidCardUid: searchRegex },
+          { designation: searchRegex }
+        ];
+      }
     }
 
     const employees = await Employee.find(query).sort({ employeeId: 1 });
@@ -88,6 +94,17 @@ exports.getNextEmployeeId = async (req, res) => {
 // Get single employee by ID
 exports.getEmployeeById = async (req, res) => {
   try {
+    // Security Check: If staff user, they can strictly ONLY view their own profile!
+    if (req.user && req.user.role === 'staff') {
+      const staffEmpId = String(req.user.employee?._id || req.user.employee);
+      if (String(req.params.id) !== staffEmpId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own employee details.'
+        });
+      }
+    }
+
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });

@@ -10,7 +10,14 @@ const { getLocalDateString } = require('../utils/dateUtils');
 exports.getTodayAttendance = async (req, res) => {
   try {
     const todayStr = getLocalDateString();
-    const employees = await Employee.find({ status: 'Active' }).sort({ fullName: 1 });
+    let empQuery = { status: 'Active' };
+    const isStaff = req.user && req.user.role === 'staff';
+    const staffEmpId = isStaff ? (req.user.employee?._id || req.user.employee) : null;
+    if (isStaff && staffEmpId) {
+      empQuery._id = staffEmpId;
+    }
+
+    const employees = await Employee.find(empQuery).sort({ fullName: 1 });
     const attendanceRecords = await Attendance.find({ date: todayStr });
 
     const attendanceMap = new Map();
@@ -130,16 +137,21 @@ exports.getAttendanceByDate = async (req, res) => {
     const { date = getLocalDateString(), department, search } = req.query;
 
     let empQuery = {};
-    if (department && department !== 'All') {
-      empQuery.department = department;
-    }
-    if (search) {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      empQuery.$or = [
-        { fullName: searchRegex },
-        { employeeId: searchRegex },
-        { department: searchRegex }
-      ];
+    if (req.user && req.user.role === 'staff') {
+      const staffEmpId = req.user.employee?._id || req.user.employee;
+      empQuery._id = staffEmpId;
+    } else {
+      if (department && department !== 'All') {
+        empQuery.department = department;
+      }
+      if (search) {
+        const searchRegex = new RegExp(search.trim(), 'i');
+        empQuery.$or = [
+          { fullName: searchRegex },
+          { employeeId: searchRegex },
+          { department: searchRegex }
+        ];
+      }
     }
 
     const employees = await Employee.find(empQuery).sort({ employeeId: 1 });
