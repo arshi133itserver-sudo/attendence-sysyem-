@@ -56,6 +56,7 @@ export default function StaffIdCardModal({
           }
           #printable-id-card-sheet {
             position: absolute !important;
+            display: block !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
@@ -215,15 +216,26 @@ export default function StaffIdCardModal({
 
 /**
  * EXACT Physical Arshi Enterprises ID Card Front Design
+ * Matches the official Purnia Head Office ID Card sample (A to Z layout)
  */
 function OfficialArshiIdCardFront({ emp, isPrint = false }) {
   const photo = emp.profilePhoto || '';
-  const name = (emp.fullName || 'EMPLOYEE').toUpperCase();
-  const id = emp.employeeId || 'AE1322';
-  const dept = emp.department || 'Back Office';
-  const designation = emp.designation || 'Staff';
-  const rfid = emp.rfidCardUid || '0007377834';
-  const mobile = emp.mobileNumber ? emp.mobileNumber.replace(/^\+91\s*/, '') : '9297779222';
+  const rawFullName = emp.fullName || 'EMPLOYEE NAME';
+
+  // Extract potential alias in parentheses e.g. "CHETAN Kr. (UDIT)" -> mainName: "CHETAN Kr.", alias: "(UDIT)"
+  let mainName = rawFullName.toUpperCase();
+  let alias = '';
+  const parenMatch = rawFullName.match(/^(.*?)\s*(\(.*?\))\s*$/);
+  if (parenMatch) {
+    mainName = parenMatch[1].toUpperCase().trim();
+    alias = parenMatch[2].toUpperCase().trim();
+  }
+
+  const id = emp.employeeId || 'AE1304';
+  const dept = emp.department || 'Sales & Marketing';
+  const designation = emp.designation || 'Marketing Manager';
+  const bloodGroup = emp.bloodGroup || 'O+';
+  const mobile = emp.mobileNumber ? emp.mobileNumber.replace(/^\+91\s*/, '') : '9934602288';
 
   // Issue date & Valid Upto
   let issueDateStr = '01.08.2025';
@@ -246,199 +258,229 @@ function OfficialArshiIdCardFront({ emp, isPrint = false }) {
 
   return (
     <div
-      className="relative w-[310px] h-[495px] rounded-[24px] overflow-hidden bg-white text-slate-900 border border-slate-300 shadow-2xl flex flex-col justify-between select-none font-sans"
+      className="relative w-[340px] h-[520px] rounded-[22px] overflow-hidden bg-white text-slate-900 border border-slate-300 shadow-2xl flex flex-col justify-between select-none font-sans"
       style={{
-        boxShadow: isPrint ? 'none' : '0 15px 35px -10px rgba(0, 0, 0, 0.45)'
+        boxShadow: isPrint ? 'none' : '0 18px 40px -10px rgba(0, 0, 0, 0.45)'
       }}
     >
-      {/* Top Lanyard Oval Slot */}
-      <div className="w-full flex justify-center pt-2">
-        <div className="w-11 h-2.5 rounded-full bg-slate-200/90 border border-slate-300/80 shadow-inner" />
-      </div>
+      {/* Background Waves along Right Edge */}
+      <svg
+        className="absolute top-0 right-0 h-full w-28 pointer-events-none z-0"
+        viewBox="0 0 100 520"
+        fill="none"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="cyanWave" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.9" />
+            <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.95" />
+          </linearGradient>
+          <linearGradient id="goldWave" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef08a" />
+            <stop offset="40%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+        </defs>
 
-      {/* Header: Arshi Enterprises */}
-      <div className="text-center pt-1 px-4">
-        <h1
-          className="text-[23px] font-black tracking-tight leading-none"
-          style={{ color: '#d3202f', fontFamily: 'system-ui, -apple-system, sans-serif' }}
-        >
-          Arshi Enterprises
-        </h1>
-        <p
-          className="text-[10px] font-bold tracking-tight text-[#1b3a6b] mt-0.5"
-        >
-          A complete Security Solution
-        </p>
-      </div>
+        {/* Outer Cyan Wave */}
+        <path
+          d="M 40 0 C 75 100, 15 220, 55 340 C 75 400, 90 470, 100 520 L 100 0 Z"
+          fill="url(#cyanWave)"
+        />
 
-      {/* Upper Content: Name/Phone/Role on Left, Staff Photo on Right */}
-      <div className="px-4 pt-2 pb-1 flex items-start justify-between gap-2">
-        <div className="flex-1 pr-1 pt-1 space-y-1">
-          {/* Name in large bold navy font */}
-          <h2 className="text-[20px] font-black text-[#1e2a52] uppercase tracking-wide leading-tight break-words">
-            {name}
-          </h2>
-          {/* Mobile number */}
-          <p className="text-[13px] font-black text-[#1e293b] tracking-normal">
-            {mobile}
-          </p>
-          {/* Designation */}
-          <p className="text-[13px] font-black text-[#1e293b] capitalize tracking-tight">
-            {designation}
-          </p>
-        </div>
+        {/* Inner Golden Ribbon */}
+        <path
+          d="M 28 0 C 60 100, 5 220, 42 340 C 58 400, 75 470, 85 520 C 78 470, 60 400, 44 340 C 8 220, 60 100, 30 0 Z"
+          fill="url(#goldWave)"
+        />
+      </svg>
 
-        {/* Staff Portrait Photo */}
-        <div className="w-[105px] h-[125px] rounded-2xl overflow-hidden border border-slate-300 shadow-sm shrink-0 bg-slate-100 flex items-center justify-center">
-          {photo ? (
-            <img src={photo} alt={name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white font-black text-3xl flex items-center justify-center">
-              {name.charAt(0)}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Middle-Left: Red Circular Emblem Ring with Blue Sports Car & Arshi GPS Shield */}
+      <div className="absolute left-[-22px] top-[215px] w-36 h-36 rounded-full border-[11px] border-[#d8232a] bg-white z-10 flex items-center justify-center shadow-sm">
+        <div className="relative w-full h-full flex items-center justify-center">
+          {/* Glass Safety Dome Arc */}
+          <div className="absolute inset-1.5 rounded-full border-t border-l border-slate-300/80 bg-gradient-to-tr from-transparent via-sky-100/30 to-blue-200/40 pointer-events-none" />
 
-      {/* Middle Section: Circular Arshi GPS Emblem on Left, Aligned Table on Right */}
-      <div className="px-3 flex items-center justify-between gap-1 relative my-auto">
-        {/* Left: Circular Crimson Emblem with Car & Arshi GPS Shield */}
-        <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
-          {/* Crimson Arc Graphic */}
-          <div
-            className="absolute inset-0 rounded-full border-[7px] border-l-transparent border-t-[#a81926] border-r-[#a81926] border-b-[#a81926]"
-            style={{ transform: 'rotate(-45deg)' }}
-          />
+          {/* Blue 3D Sportscar SVG */}
+          <svg className="w-16 h-10 ml-1" viewBox="0 0 120 60" fill="none">
+            <defs>
+              <linearGradient id="carBodyGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+                <stop offset="0%" stopColor="#1e3a8a" />
+                <stop offset="40%" stopColor="#2563eb" />
+                <stop offset="100%" stopColor="#1d4ed8" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M 12 42 C 16 34, 25 28, 40 24 C 55 20, 85 20, 100 28 C 110 33, 115 38, 118 42 L 115 47 L 10 47 Z"
+              fill="url(#carBodyGrad)"
+            />
+            <path
+              d="M 45 25 C 55 21, 75 21, 88 27 L 85 34 L 40 34 Z"
+              fill="#bae6fd"
+              opacity="0.9"
+            />
+            <polygon points="12,42 18,39 20,43" fill="#fef08a" />
+            <circle cx="28" cy="47" r="8" fill="#0f172a" stroke="#94a3b8" strokeWidth="2" />
+            <circle cx="28" cy="47" r="4" fill="#cbd5e1" />
+            <circle cx="95" cy="47" r="8" fill="#0f172a" stroke="#94a3b8" strokeWidth="2" />
+            <circle cx="95" cy="47" r="4" fill="#cbd5e1" />
+          </svg>
 
-          {/* Center 3D Car & Shield Graphics */}
-          <div className="relative z-10 flex flex-col items-center justify-center">
-            {/* Blue Sportscar SVG representation */}
-            <svg className="w-14 h-8" viewBox="0 0 100 50" fill="none">
-              <path
-                d="M10 35 L20 25 L40 20 L70 20 L85 28 L95 35 L90 40 L10 40 Z"
-                fill="#1e40af"
-              />
-              <path
-                d="M38 22 L65 22 L75 28 L35 28 Z"
-                fill="#93c5fd"
-              />
-              <circle cx="25" cy="40" r="7" fill="#111827" stroke="#60a5fa" strokeWidth="2" />
-              <circle cx="78" cy="40" r="7" fill="#111827" stroke="#60a5fa" strokeWidth="2" />
-            </svg>
-
-            {/* Gold Shield with Arshi GPS text */}
-            <div className="relative -mt-2 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 border border-amber-200 px-2.5 py-0.5 rounded-b-xl shadow-md text-center">
-              <span className="text-[8px] font-black text-slate-950 uppercase tracking-tighter block leading-none">
+          {/* Golden Shield with "Arshi GPS" */}
+          <div className="absolute right-1 top-6 w-11 h-14 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 rounded-b-2xl border-2 border-amber-200 shadow-md flex flex-col items-center justify-center p-0.5">
+            <div className="w-full bg-[#111827] rounded-t-sm py-0.5 text-center">
+              <span className="text-[7.5px] font-black text-amber-300 uppercase tracking-tighter block leading-none">
                 Arshi
               </span>
-              <span className="text-[8px] font-black text-red-700 uppercase tracking-tighter block leading-none">
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <span className="text-[9px] font-black text-[#111827] uppercase tracking-tighter leading-none">
                 GPS
               </span>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Right: Data Field Table with perfectly aligned colons */}
-        <div className="flex-1 text-[11px] font-bold text-[#0f172a] space-y-1 pl-1">
-          <div className="grid grid-cols-[82px_10px_1fr] items-center">
-            <span className="text-[#1e293b]">Employee Id</span>
-            <span className="text-center font-bold">:</span>
-            <span className="font-extrabold font-mono text-[#0f172a] truncate">{id}</span>
-          </div>
+      {/* Bottom-Left Red Curve Accent */}
+      <div className="absolute left-0 bottom-0 w-28 h-28 pointer-events-none z-0">
+        <svg className="w-full h-full" viewBox="0 0 100 100" fill="none">
+          <path
+            d="M 0 35 C 30 40, 55 70, 45 100 L 0 100 Z"
+            fill="#d8232a"
+          />
+        </svg>
+      </div>
 
-          <div className="grid grid-cols-[82px_10px_1fr] items-center">
-            <span className="text-[#1e293b]">Department</span>
-            <span className="text-center font-bold">:</span>
-            <span className="font-bold truncate">{dept}</span>
-          </div>
+      {/* 1. Header (Top Left) */}
+      <div className="pt-4 pl-4 pr-2 text-left relative z-10">
+        <h1
+          className="text-[25px] font-black tracking-tight leading-none text-[#d8232a]"
+          style={{ fontFamily: "'Arial Black', 'Trebuchet MS', system-ui, sans-serif" }}
+        >
+          Arshi Enterprises
+        </h1>
+        <p className="text-[11px] font-black tracking-tight text-[#102a5c] mt-0.5">
+          A complete Security Solution
+        </p>
+      </div>
 
-          <div className="grid grid-cols-[82px_10px_1fr] items-center">
-            <span className="text-[#1e293b]">Issue Date</span>
-            <span className="text-center font-bold">:</span>
-            <span className="font-mono">{issueDateStr}</span>
-          </div>
-
-          <div className="grid grid-cols-[82px_10px_1fr] items-center">
-            <span className="text-[#1e293b]">Valid Upto</span>
-            <span className="text-center font-bold">:</span>
-            <span className="font-mono">{validUptoStr}</span>
-          </div>
-
-          <div className="grid grid-cols-[82px_10px_1fr] items-center">
-            <span className="text-[#1e293b]">Blood Group</span>
-            <span className="text-center font-bold">:</span>
-            <span className="font-bold text-red-600">{emp.bloodGroup || 'B+'}</span>
-          </div>
-
-          {emp.dob && (
-            <div className="grid grid-cols-[82px_10px_1fr] items-center">
-              <span className="text-[#1e293b]">D.O.B</span>
-              <span className="text-center font-bold">:</span>
-              <span className="font-mono text-[11px] font-bold text-slate-800">
-                {new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(emp.dob))}
-              </span>
-            </div>
+      {/* 2. Upper Content: Primary Info on Left, Employee Photo on Right */}
+      <div className="px-4 pt-2.5 pb-1 flex items-start justify-between gap-2 relative z-10">
+        {/* Left Info: Name, Alias, Phone, Designation */}
+        <div className="flex-1 pr-1 space-y-0.5 pt-0.5">
+          <h2 className="text-[21px] font-black text-[#102a5c] tracking-tight leading-tight uppercase break-words">
+            {mainName}
+          </h2>
+          {alias && (
+            <p className="text-[13.5px] font-black text-[#102a5c] leading-tight">
+              {alias}
+            </p>
           )}
+          <p className="text-[15.5px] font-black text-[#102a5c] tracking-normal pt-0.5">
+            {mobile}
+          </p>
+          <p className="text-[14px] font-black text-[#102a5c] leading-tight pt-0.5">
+            {designation}
+          </p>
+        </div>
 
-          {rfid && rfid !== 'UNASSIGNED' && (
-            <div className="grid grid-cols-[82px_10px_1fr] items-center">
-              <span className="text-[#1e293b]">RFID Card</span>
-              <span className="text-center font-bold">:</span>
-              <span className="font-mono font-bold text-emerald-700 truncate">{rfid}</span>
+        {/* Right Photo */}
+        <div className="w-[125px] h-[155px] rounded-2xl overflow-hidden border-2 border-slate-200/90 shadow-md shrink-0 bg-slate-100 flex items-center justify-center relative z-10">
+          {photo ? (
+            <img src={photo} alt={rawFullName} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-tr from-slate-700 via-slate-800 to-slate-900 text-white flex flex-col items-center justify-center">
+              <User className="w-12 h-12 text-slate-300 mb-1" />
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">{rawFullName.slice(0, 10)}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Lower Right Branding & QR Code Strip */}
-      <div className="px-4 py-1 flex items-center justify-end gap-3">
-        {/* CarOnline App Logo Emblem */}
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full border border-red-500 bg-gradient-to-tr from-sky-400 via-blue-600 to-indigo-700 flex items-center justify-center shadow-sm">
-            <div className="w-4 h-4 rounded-full border border-white/60 bg-red-600 flex items-center justify-center">
-              <span className="text-[7px] text-white font-black">C</span>
-            </div>
+      {/* 3. Middle Section: Details Table & App Icon / QR */}
+      <div className="pl-32 pr-4 pt-1 pb-1 relative z-10">
+        <div className="space-y-1.5 text-[11.5px] font-bold text-[#102a5c]">
+          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
+            <span className="font-extrabold text-[#102a5c]">Employee Id</span>
+            <span className="text-center font-black">:</span>
+            <span className="font-black font-mono text-[#102a5c] truncate">{id}</span>
           </div>
-          <span className="text-[7px] font-black text-slate-700 uppercase tracking-tighter mt-0.5">
-            CarOnline
-          </span>
+
+          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
+            <span className="font-extrabold text-[#102a5c]">Department</span>
+            <span className="text-center font-black">:</span>
+            <span className="font-bold text-[#102a5c] truncate">{dept}</span>
+          </div>
+
+          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
+            <span className="font-extrabold text-[#102a5c]">Issue Date</span>
+            <span className="text-center font-black">:</span>
+            <span className="font-bold font-mono text-[#102a5c]">{issueDateStr}</span>
+          </div>
+
+          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
+            <span className="font-extrabold text-[#102a5c]">Valid Upto</span>
+            <span className="text-center font-black">:</span>
+            <span className="font-bold font-mono text-[#102a5c]">{validUptoStr}</span>
+          </div>
+
+          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
+            <span className="font-extrabold text-[#102a5c]">Blood Group</span>
+            <span className="text-center font-black">:</span>
+            <span className="font-black text-[#102a5c]">{bloodGroup}</span>
+          </div>
         </div>
 
-        {/* Real High-Contrast Vector QR Code */}
-        <div className="w-10 h-10 border border-slate-300 p-0.5 bg-white rounded shadow-sm flex items-center justify-center">
-          <svg className="w-full h-full" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="2" width="6" height="6" fill="#0f172a" />
-            <rect x="16" y="2" width="6" height="6" fill="#0f172a" />
-            <rect x="2" y="16" width="6" height="6" fill="#0f172a" />
-            <rect x="4" y="4" width="2" height="2" fill="white" />
-            <rect x="18" y="4" width="2" height="2" fill="white" />
-            <rect x="4" y="18" width="2" height="2" fill="white" />
-            <rect x="10" y="2" width="2" height="4" fill="#0f172a" />
-            <rect x="10" y="8" width="4" height="2" fill="#0f172a" />
-            <rect x="12" y="12" width="3" height="3" fill="#0f172a" />
-            <rect x="16" y="14" width="4" height="2" fill="#0f172a" />
-            <rect x="10" y="18" width="3" height="4" fill="#0f172a" />
-            <rect x="15" y="18" width="4" height="4" fill="#0f172a" />
-          </svg>
+        {/* CarOnline App icon & QR Code row */}
+        <div className="pt-2 flex items-center justify-end gap-3">
+          {/* CarOnline App Icon */}
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-[#22c55e] to-[#15803d] p-0.5 shadow-md flex items-center justify-center">
+              <div className="w-full h-full rounded-[10px] bg-gradient-to-tr from-[#0284c7] via-[#0ea5e9] to-[#38bdf8] flex items-center justify-center p-1">
+                {/* Red Car Icon */}
+                <svg className="w-5 h-4" viewBox="0 0 24 16" fill="none">
+                  <path
+                    d="M3 11 C4 8, 7 6, 12 6 C17 6, 20 8, 21 11 L 22 13 L 2 13 Z"
+                    fill="#ef4444"
+                  />
+                  <circle cx="6" cy="13" r="2.5" fill="#0f172a" stroke="#fff" strokeWidth="1" />
+                  <circle cx="18" cy="13" r="2.5" fill="#0f172a" stroke="#fff" strokeWidth="1" />
+                </svg>
+              </div>
+            </div>
+            <span className="text-[8px] font-black text-[#102a5c] tracking-tight mt-0.5">
+              CarOnline
+            </span>
+          </div>
+
+          {/* QR Code */}
+          <div className="w-11 h-11 border border-slate-300 p-0.5 bg-white rounded shadow-sm flex items-center justify-center">
+            <svg className="w-full h-full" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="2" width="6" height="6" fill="#102a5c" />
+              <rect x="16" y="2" width="6" height="6" fill="#102a5c" />
+              <rect x="2" y="16" width="6" height="6" fill="#102a5c" />
+              <rect x="4" y="4" width="2" height="2" fill="white" />
+              <rect x="18" y="4" width="2" height="2" fill="white" />
+              <rect x="4" y="18" width="2" height="2" fill="white" />
+              <rect x="10" y="2" width="2" height="4" fill="#102a5c" />
+              <rect x="10" y="8" width="4" height="2" fill="#102a5c" />
+              <rect x="12" y="12" width="3" height="3" fill="#102a5c" />
+              <rect x="16" y="14" width="4" height="2" fill="#102a5c" />
+              <rect x="10" y="18" width="3" height="4" fill="#102a5c" />
+              <rect x="15" y="18" width="4" height="4" fill="#102a5c" />
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Footer with Contact & Address */}
-      <div className="relative bg-gradient-to-b from-white via-slate-50 to-blue-50/70 border-t border-slate-200/80 pt-1.5 pb-2.5 px-3 text-center overflow-hidden">
-        {/* Right Corner Blue & Gold Accent Swooshes */}
-        <div className="absolute right-0 bottom-0 w-16 h-full pointer-events-none">
-          <div className="w-full h-full bg-gradient-to-l from-blue-600/30 via-sky-400/20 to-transparent" />
-          <div className="absolute right-0 bottom-0 w-4 h-full bg-blue-600/90" />
-          <div className="absolute right-4 bottom-0 w-1.5 h-full bg-amber-400" />
-        </div>
-
-        {/* Contact numbers */}
-        <p className="text-[13px] font-black text-[#0f172a] tracking-tight relative z-10 leading-tight">
+      {/* 4. Bottom Footer: Phone Numbers & Purnia Headquarters Address */}
+      <div className="relative z-10 pb-3 pt-1.5 px-4 text-center">
+        <p className="text-[15px] font-black text-[#102a5c] tracking-tight leading-tight">
           7782808063, 9199059257
         </p>
-
-        {/* Purnia Address */}
-        <div className="text-[8px] font-bold text-[#1e293b] tracking-tight mt-0.5 leading-tight relative z-10">
+        <div className="text-[9.5px] font-black text-[#102a5c] tracking-tight mt-0.5 leading-tight">
           <p>Near- Brajesh Automobiles Mahindra Showroom</p>
           <p>NH-31, Maranga, Purnia- 854303</p>
         </div>
@@ -456,9 +498,9 @@ function OfficialArshiIdCardBack({ emp, isPrint = false }) {
 
   return (
     <div
-      className="relative w-[310px] h-[495px] rounded-[24px] overflow-hidden bg-white text-slate-900 border border-slate-300 shadow-2xl flex flex-col justify-between p-4 select-none font-sans"
+      className="relative w-[340px] h-[520px] rounded-[22px] overflow-hidden bg-white text-slate-900 border border-slate-300 shadow-2xl flex flex-col justify-between p-5 select-none font-sans"
       style={{
-        boxShadow: isPrint ? 'none' : '0 15px 35px -10px rgba(0, 0, 0, 0.45)'
+        boxShadow: isPrint ? 'none' : '0 18px 40px -10px rgba(0, 0, 0, 0.45)'
       }}
     >
       {/* Top Slot */}
