@@ -3,19 +3,14 @@ import {
   X,
   Printer,
   CreditCard,
-  Phone,
-  Mail,
-  Building,
-  Calendar,
-  ShieldCheck,
-  QrCode,
-  Sparkles,
-  Layers,
-  User,
-  Radio,
-  CheckCircle2,
   Users
 } from 'lucide-react';
+import {
+  ID_CAR_LOGO,
+  ID_CARONLINE_LOGO,
+  ID_QR_CODE,
+  ID_DEFAULT_PHOTO
+} from '../assets/idCardAssets';
 
 export default function StaffIdCardModal({
   isOpen,
@@ -160,7 +155,7 @@ export default function StaffIdCardModal({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-200/60 dark:bg-slate-950/60">
+        <div className="p-6 overflow-y-auto flex-1 bg-slate-200/70 dark:bg-slate-950/70">
           
           {employeesToRender.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
@@ -168,16 +163,16 @@ export default function StaffIdCardModal({
               <p className="font-bold">No active employees found in selected department.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
+            <div className="flex flex-wrap gap-8 justify-center items-center">
               {employeesToRender.map((emp) => (
-                <React.Fragment key={emp._id}>
+                <div key={emp._id} className="flex flex-wrap gap-4 justify-center items-center">
                   {(viewSide === 'front' || viewSide === 'both' || !employee) && (
                     <OfficialArshiIdCardFront emp={emp} />
                   )}
                   {(viewSide === 'back' || viewSide === 'both' || !employee) && (
                     <OfficialArshiIdCardBack emp={emp} />
                   )}
-                </React.Fragment>
+                </div>
               ))}
             </div>
           )}
@@ -186,7 +181,7 @@ export default function StaffIdCardModal({
         {/* Footer info */}
         <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between text-[11px] text-slate-500">
           <span>
-            💡 <strong>Printing Tip:</strong> Standard PVC Card Size (CR80). Select "Background Graphics: ON" in print dialog.
+            💡 <strong>Printing Tip:</strong> Standard PVC Card Size (CR80, 54mm × 86mm). Turn on "Background Graphics" in the print settings.
           </span>
           <span className="font-mono text-slate-600 dark:text-slate-400 font-bold">
             Arshi Enterprises • Security Solutions
@@ -196,7 +191,7 @@ export default function StaffIdCardModal({
 
       {/* Hidden container targeted specifically by browser @media print */}
       <div id="printable-id-card-sheet" className="hidden">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', padding: '5px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', padding: '5px' }}>
           {employeesToRender.map((emp) => (
             <React.Fragment key={emp._id}>
               <div className="id-card-print-item">
@@ -216,10 +211,10 @@ export default function StaffIdCardModal({
 
 /**
  * EXACT Physical Arshi Enterprises ID Card Front Design
- * Matches the official Purnia Head Office ID Card sample (A to Z layout)
+ * Matches the official Purnia Head Office ID Card template 100% pixel-perfect (A to Z)
  */
-function OfficialArshiIdCardFront({ emp, isPrint = false }) {
-  const photo = emp.profilePhoto || '';
+export function OfficialArshiIdCardFront({ emp, isPrint = false }) {
+  const photo = emp.profilePhoto || ID_DEFAULT_PHOTO;
   const rawFullName = emp.fullName || 'EMPLOYEE NAME';
 
   // Extract potential alias in parentheses e.g. "CHETAN Kr. (UDIT)" -> mainName: "CHETAN Kr.", alias: "(UDIT)"
@@ -256,233 +251,230 @@ function OfficialArshiIdCardFront({ emp, isPrint = false }) {
     validUptoStr = `${vdd}.${vmm}.${vyyyy}`;
   }
 
+  const gradId = `bl_${id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const bgId = `bg_${id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
   return (
     <div
-      className="relative w-[340px] h-[520px] rounded-[22px] overflow-hidden bg-white text-slate-900 border border-slate-300 shadow-2xl flex flex-col justify-between select-none font-sans"
       style={{
-        boxShadow: isPrint ? 'none' : '0 18px 40px -10px rgba(0, 0, 0, 0.45)'
+        position: 'relative',
+        width: '300px',
+        height: '400px',
+        background: '#fff',
+        overflow: 'hidden',
+        boxShadow: isPrint ? 'none' : '0 4px 15px rgba(0,0,0,0.3)',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        borderRadius: isPrint ? '0px' : '8px',
+        boxSizing: 'border-box'
       }}
     >
-      {/* Background Waves along Right Edge */}
+      {/* Background SVG Decor */}
       <svg
-        className="absolute top-0 right-0 h-full w-28 pointer-events-none z-0"
-        viewBox="0 0 100 520"
-        fill="none"
-        preserveAspectRatio="none"
+        width="300"
+        height="400"
+        viewBox="0 0 300 400"
+        style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
       >
         <defs>
-          <linearGradient id="cyanWave" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.95" />
+          <linearGradient id={bgId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="1" stopColor="#f1f1f1" />
           </linearGradient>
-          <linearGradient id="goldWave" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fef08a" />
-            <stop offset="40%" stopColor="#fbbf24" />
-            <stop offset="100%" stopColor="#f59e0b" />
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#2aa6d8" />
+            <stop offset="1" stopColor="#0b78b5" />
           </linearGradient>
         </defs>
-
-        {/* Outer Cyan Wave */}
-        <path
-          d="M 40 0 C 75 100, 15 220, 55 340 C 75 400, 90 470, 100 520 L 100 0 Z"
-          fill="url(#cyanWave)"
-        />
-
-        {/* Inner Golden Ribbon */}
-        <path
-          d="M 28 0 C 60 100, 5 220, 42 340 C 58 400, 75 470, 85 520 C 78 470, 60 400, 44 340 C 8 220, 60 100, 30 0 Z"
-          fill="url(#goldWave)"
-        />
+        <rect width="300" height="400" fill={`url(#${bgId})`} />
+        <path d="M300 300 C282 330 278 365 286 400 L300 400Z" fill={`url(#${gradId})`} />
+        <path d="M290 290 C270 325 266 365 272 400 L278 400 C272 365 276 325 296 292Z" fill="#f6dd8f" />
+        <circle cx="47" cy="277" r="89" fill="#e3000f" />
+        <polygon points="63,405 -9,346 118.5,330" fill="#e3000f" />
+        <circle cx="47" cy="277" r="70" fill="#fff" />
       </svg>
 
-      {/* Middle-Left: Red Circular Emblem Ring with Blue Sports Car & Arshi GPS Shield */}
-      <div className="absolute left-[-22px] top-[215px] w-36 h-36 rounded-full border-[11px] border-[#d8232a] bg-white z-10 flex items-center justify-center shadow-sm">
-        <div className="relative w-full h-full flex items-center justify-center">
-          {/* Glass Safety Dome Arc */}
-          <div className="absolute inset-1.5 rounded-full border-t border-l border-slate-300/80 bg-gradient-to-tr from-transparent via-sky-100/30 to-blue-200/40 pointer-events-none" />
-
-          {/* Blue 3D Sportscar SVG */}
-          <svg className="w-16 h-10 ml-1" viewBox="0 0 120 60" fill="none">
-            <defs>
-              <linearGradient id="carBodyGrad" x1="0%" y1="0%" x2="100%" y2="50%">
-                <stop offset="0%" stopColor="#1e3a8a" />
-                <stop offset="40%" stopColor="#2563eb" />
-                <stop offset="100%" stopColor="#1d4ed8" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M 12 42 C 16 34, 25 28, 40 24 C 55 20, 85 20, 100 28 C 110 33, 115 38, 118 42 L 115 47 L 10 47 Z"
-              fill="url(#carBodyGrad)"
-            />
-            <path
-              d="M 45 25 C 55 21, 75 21, 88 27 L 85 34 L 40 34 Z"
-              fill="#bae6fd"
-              opacity="0.9"
-            />
-            <polygon points="12,42 18,39 20,43" fill="#fef08a" />
-            <circle cx="28" cy="47" r="8" fill="#0f172a" stroke="#94a3b8" strokeWidth="2" />
-            <circle cx="28" cy="47" r="4" fill="#cbd5e1" />
-            <circle cx="95" cy="47" r="8" fill="#0f172a" stroke="#94a3b8" strokeWidth="2" />
-            <circle cx="95" cy="47" r="4" fill="#cbd5e1" />
-          </svg>
-
-          {/* Golden Shield with "Arshi GPS" */}
-          <div className="absolute right-1 top-6 w-11 h-14 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 rounded-b-2xl border-2 border-amber-200 shadow-md flex flex-col items-center justify-center p-0.5">
-            <div className="w-full bg-[#111827] rounded-t-sm py-0.5 text-center">
-              <span className="text-[7.5px] font-black text-amber-300 uppercase tracking-tighter block leading-none">
-                Arshi
-              </span>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <span className="text-[9px] font-black text-[#111827] uppercase tracking-tighter leading-none">
-                GPS
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom-Left Red Curve Accent */}
-      <div className="absolute left-0 bottom-0 w-28 h-28 pointer-events-none z-0">
-        <svg className="w-full h-full" viewBox="0 0 100 100" fill="none">
-          <path
-            d="M 0 35 C 30 40, 55 70, 45 100 L 0 100 Z"
-            fill="#d8232a"
-          />
-        </svg>
-      </div>
-
-      {/* 1. Header (Top Left) */}
-      <div className="pt-4 pl-4 pr-2 text-left relative z-10">
+      {/* Header Logo */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          zIndex: 1
+        }}
+      >
         <h1
-          className="text-[25px] font-black tracking-tight leading-none text-[#d8232a]"
-          style={{ fontFamily: "'Arial Black', 'Trebuchet MS', system-ui, sans-serif" }}
+          style={{
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: '23px',
+            color: '#c8102e',
+            fontWeight: 'bold',
+            lineHeight: 1.1,
+            margin: 0
+          }}
         >
           Arshi Enterprises
         </h1>
-        <p className="text-[11px] font-black tracking-tight text-[#102a5c] mt-0.5">
+        <p
+          style={{
+            fontSize: '8px',
+            color: '#222',
+            fontFamily: 'Georgia, serif',
+            fontWeight: 'bold',
+            margin: 0
+          }}
+        >
           A complete Security Solution
         </p>
       </div>
 
-      {/* 2. Upper Content: Primary Info on Left, Employee Photo on Right */}
-      <div className="px-4 pt-2.5 pb-1 flex items-start justify-between gap-2 relative z-10">
-        {/* Left Info: Name, Alias, Phone, Designation */}
-        <div className="flex-1 pr-1 space-y-0.5 pt-0.5">
-          <h2 className="text-[21px] font-black text-[#102a5c] tracking-tight leading-tight uppercase break-words">
-            {mainName}
-          </h2>
-          {alias && (
-            <p className="text-[13.5px] font-black text-[#102a5c] leading-tight">
-              {alias}
-            </p>
-          )}
-          <p className="text-[15.5px] font-black text-[#102a5c] tracking-normal pt-0.5">
-            {mobile}
-          </p>
-          <p className="text-[14px] font-black text-[#102a5c] leading-tight pt-0.5">
-            {designation}
-          </p>
+      {/* Info Block (Left) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '88px',
+          left: 0,
+          width: '155px',
+          textAlign: 'center',
+          color: '#0b2a6f',
+          zIndex: 1
+        }}
+      >
+        <div style={{ fontSize: '22px', fontWeight: 'bold', lineHeight: 1.1 }}>
+          {mainName}
         </div>
-
-        {/* Right Photo */}
-        <div className="w-[125px] h-[155px] rounded-2xl overflow-hidden border-2 border-slate-200/90 shadow-md shrink-0 bg-slate-100 flex items-center justify-center relative z-10">
-          {photo ? (
-            <img src={photo} alt={rawFullName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-tr from-slate-700 via-slate-800 to-slate-900 text-white flex flex-col items-center justify-center">
-              <User className="w-12 h-12 text-slate-300 mb-1" />
-              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">{rawFullName.slice(0, 10)}</span>
-            </div>
-          )}
+        {alias && (
+          <div style={{ fontSize: '13px', fontWeight: 'bold', marginTop: '2px' }}>
+            {alias}
+          </div>
+        )}
+        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0b2a6f', marginTop: '8px' }}>
+          {mobile}
+        </div>
+        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#222', marginTop: '3px' }}>
+          {designation}
         </div>
       </div>
 
-      {/* 3. Middle Section: Details Table & App Icon / QR */}
-      <div className="pl-32 pr-4 pt-1 pb-1 relative z-10">
-        <div className="space-y-1.5 text-[11.5px] font-bold text-[#102a5c]">
-          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
-            <span className="font-extrabold text-[#102a5c]">Employee Id</span>
-            <span className="text-center font-black">:</span>
-            <span className="font-black font-mono text-[#102a5c] truncate">{id}</span>
-          </div>
+      {/* Photo (Right) */}
+      <img
+        src={photo}
+        alt={rawFullName}
+        style={{
+          position: 'absolute',
+          top: '55px',
+          left: '155px',
+          width: '145px',
+          height: '158px',
+          objectFit: 'cover',
+          zIndex: 1
+        }}
+      />
 
-          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
-            <span className="font-extrabold text-[#102a5c]">Department</span>
-            <span className="text-center font-black">:</span>
-            <span className="font-bold text-[#102a5c] truncate">{dept}</span>
-          </div>
+      {/* Car Logo inside circle */}
+      <img
+        src={ID_CAR_LOGO}
+        alt="Arshi GPS"
+        style={{
+          position: 'absolute',
+          left: '9px',
+          top: '238px',
+          width: '97px',
+          height: '66px',
+          mixBlendMode: 'multiply',
+          zIndex: 1
+        }}
+      />
 
-          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
-            <span className="font-extrabold text-[#102a5c]">Issue Date</span>
-            <span className="text-center font-black">:</span>
-            <span className="font-bold font-mono text-[#102a5c]">{issueDateStr}</span>
-          </div>
+      {/* Details Table */}
+      <table
+        style={{
+          position: 'absolute',
+          top: '222px',
+          left: '147px',
+          width: '153px',
+          borderCollapse: 'collapse',
+          fontSize: '8px',
+          fontWeight: 'bold',
+          color: '#0b2a6f',
+          zIndex: 1
+        }}
+      >
+        <tbody>
+          <tr>
+            <td style={{ textAlign: 'right', paddingRight: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>Employee Id</td>
+            <td style={{ width: '8px', textAlign: 'center', padding: '2.2px 0' }}>:</td>
+            <td style={{ paddingLeft: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>{id}</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'right', paddingRight: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>Department</td>
+            <td style={{ width: '8px', textAlign: 'center', padding: '2.2px 0' }}>:</td>
+            <td style={{ paddingLeft: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>{dept}</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'right', paddingRight: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>Issue Date</td>
+            <td style={{ width: '8px', textAlign: 'center', padding: '2.2px 0' }}>:</td>
+            <td style={{ paddingLeft: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>{issueDateStr}</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'right', paddingRight: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>Valid Upto</td>
+            <td style={{ width: '8px', textAlign: 'center', padding: '2.2px 0' }}>:</td>
+            <td style={{ paddingLeft: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>{validUptoStr}</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'right', paddingRight: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>Blood Group</td>
+            <td style={{ width: '8px', textAlign: 'center', padding: '2.2px 0' }}>:</td>
+            <td style={{ paddingLeft: '3px', whiteSpace: 'nowrap', padding: '2.2px 0' }}>{bloodGroup}</td>
+          </tr>
+        </tbody>
+      </table>
 
-          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
-            <span className="font-extrabold text-[#102a5c]">Valid Upto</span>
-            <span className="text-center font-black">:</span>
-            <span className="font-bold font-mono text-[#102a5c]">{validUptoStr}</span>
-          </div>
+      {/* CarOnline & QR code */}
+      <img
+        src={ID_CARONLINE_LOGO}
+        alt="CarOnline"
+        style={{
+          position: 'absolute',
+          left: '171px',
+          top: '301px',
+          width: '42px',
+          zIndex: 1
+        }}
+      />
+      <img
+        src={ID_QR_CODE}
+        alt="QR Code"
+        style={{
+          position: 'absolute',
+          left: '224px',
+          top: '301px',
+          width: '44px',
+          zIndex: 1
+        }}
+      />
 
-          <div className="grid grid-cols-[82px_12px_1fr] items-center bg-[#f0f6fd]/80 px-2 py-0.5 rounded-md">
-            <span className="font-extrabold text-[#102a5c]">Blood Group</span>
-            <span className="text-center font-black">:</span>
-            <span className="font-black text-[#102a5c]">{bloodGroup}</span>
-          </div>
-        </div>
-
-        {/* CarOnline App icon & QR Code row */}
-        <div className="pt-2 flex items-center justify-end gap-3">
-          {/* CarOnline App Icon */}
-          <div className="flex flex-col items-center">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-[#22c55e] to-[#15803d] p-0.5 shadow-md flex items-center justify-center">
-              <div className="w-full h-full rounded-[10px] bg-gradient-to-tr from-[#0284c7] via-[#0ea5e9] to-[#38bdf8] flex items-center justify-center p-1">
-                {/* Red Car Icon */}
-                <svg className="w-5 h-4" viewBox="0 0 24 16" fill="none">
-                  <path
-                    d="M3 11 C4 8, 7 6, 12 6 C17 6, 20 8, 21 11 L 22 13 L 2 13 Z"
-                    fill="#ef4444"
-                  />
-                  <circle cx="6" cy="13" r="2.5" fill="#0f172a" stroke="#fff" strokeWidth="1" />
-                  <circle cx="18" cy="13" r="2.5" fill="#0f172a" stroke="#fff" strokeWidth="1" />
-                </svg>
-              </div>
-            </div>
-            <span className="text-[8px] font-black text-[#102a5c] tracking-tight mt-0.5">
-              CarOnline
-            </span>
-          </div>
-
-          {/* QR Code */}
-          <div className="w-11 h-11 border border-slate-300 p-0.5 bg-white rounded shadow-sm flex items-center justify-center">
-            <svg className="w-full h-full" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="2" width="6" height="6" fill="#102a5c" />
-              <rect x="16" y="2" width="6" height="6" fill="#102a5c" />
-              <rect x="2" y="16" width="6" height="6" fill="#102a5c" />
-              <rect x="4" y="4" width="2" height="2" fill="white" />
-              <rect x="18" y="4" width="2" height="2" fill="white" />
-              <rect x="4" y="18" width="2" height="2" fill="white" />
-              <rect x="10" y="2" width="2" height="4" fill="#102a5c" />
-              <rect x="10" y="8" width="4" height="2" fill="#102a5c" />
-              <rect x="12" y="12" width="3" height="3" fill="#102a5c" />
-              <rect x="16" y="14" width="4" height="2" fill="#102a5c" />
-              <rect x="10" y="18" width="3" height="4" fill="#102a5c" />
-              <rect x="15" y="18" width="4" height="4" fill="#102a5c" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Bottom Footer: Phone Numbers & Purnia Headquarters Address */}
-      <div className="relative z-10 pb-3 pt-1.5 px-4 text-center">
-        <p className="text-[15px] font-black text-[#102a5c] tracking-tight leading-tight">
+      {/* Footer */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '358px',
+          left: '118px',
+          width: '175px',
+          textAlign: 'center',
+          color: '#0b2a6f',
+          fontWeight: 'bold',
+          zIndex: 1
+        }}
+      >
+        <div style={{ fontSize: '14.5px', whiteSpace: 'nowrap', marginLeft: '-6px' }}>
           7782808063, 9199059257
-        </p>
-        <div className="text-[9.5px] font-black text-[#102a5c] tracking-tight mt-0.5 leading-tight">
-          <p>Near- Brajesh Automobiles Mahindra Showroom</p>
-          <p>NH-31, Maranga, Purnia- 854303</p>
+        </div>
+        <div style={{ fontSize: '7px', lineHeight: 1.25, marginTop: '2px', whiteSpace: 'nowrap' }}>
+          Near- Brajesh Automobiles Mahindra Showroom<br />
+          NH-31,Maranga, Purnia- 854303
         </div>
       </div>
     </div>
@@ -490,85 +482,80 @@ function OfficialArshiIdCardFront({ emp, isPrint = false }) {
 }
 
 /**
- * ID Card Back Side Design (Regulations & Helpline)
+ * ID Card Back Side Design (Matching 300px × 400px PVC Card Format)
  */
-function OfficialArshiIdCardBack({ emp, isPrint = false }) {
-  const name = emp.fullName || 'Employee';
-  const id = emp.employeeId || 'AE1322';
-
+export function OfficialArshiIdCardBack({ emp, isPrint = false }) {
   return (
     <div
-      className="relative w-[340px] h-[520px] rounded-[22px] overflow-hidden bg-white text-slate-900 border border-slate-300 shadow-2xl flex flex-col justify-between p-5 select-none font-sans"
       style={{
-        boxShadow: isPrint ? 'none' : '0 18px 40px -10px rgba(0, 0, 0, 0.45)'
+        position: 'relative',
+        width: '300px',
+        height: '400px',
+        background: '#fff',
+        overflow: 'hidden',
+        boxShadow: isPrint ? 'none' : '0 4px 15px rgba(0,0,0,0.3)',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        borderRadius: isPrint ? '0px' : '8px',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        boxSizing: 'border-box'
       }}
     >
-      {/* Top Slot */}
-      <div className="w-full flex justify-center pb-2">
-        <div className="w-11 h-2.5 rounded-full bg-slate-200 border border-slate-300 shadow-inner" />
-      </div>
-
-      {/* Header */}
-      <div className="text-center pb-2 border-b border-slate-200">
-        <h3 className="text-[15px] font-black tracking-tight text-[#d3202f]">
+      {/* Top Header */}
+      <div style={{ textAlign: 'center', borderBottom: '1.5px solid #0b2a6f', paddingBottom: '6px' }}>
+        <h3 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '18px', color: '#c8102e', fontWeight: 'bold', margin: 0 }}>
           Arshi Enterprises
         </h3>
-        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
-          Instructions & Emergency Contact
+        <p style={{ fontSize: '7.5px', color: '#222', fontFamily: 'Georgia, serif', fontWeight: 'bold', margin: '2px 0 0 0' }}>
+          A complete Security Solution
         </p>
       </div>
 
-      {/* Terms of use */}
-      <div className="space-y-2 text-[10px] text-slate-700 leading-relaxed my-auto">
-        <div className="flex items-start gap-1.5">
-          <span className="text-red-600 font-bold">•</span>
-          <span>This card is personal and property of <strong>Arshi Enterprises</strong>.</span>
+      {/* Rules & Instructions */}
+      <div style={{ fontSize: '8.5px', color: '#1e293b', lineHeight: 1.45, margin: '6px 0' }}>
+        <div style={{ fontWeight: 'bold', color: '#0b2a6f', marginBottom: '4px', textTransform: 'uppercase', fontSize: '8px', letterSpacing: '0.5px' }}>
+          Cardholder Instructions:
         </div>
-        <div className="flex items-start gap-1.5">
-          <span className="text-red-600 font-bold">•</span>
-          <span>Staff must scan this card at the RFID Reader during every Entry and Checkout.</span>
-        </div>
-        <div className="flex items-start gap-1.5">
-          <span className="text-red-600 font-bold">•</span>
-          <span>In case of loss or damage, report immediately to Admin / HR office.</span>
-        </div>
-        <div className="flex items-start gap-1.5">
-          <span className="text-red-600 font-bold">•</span>
-          <span>This identity badge must be surrendered upon separation from the firm.</span>
-        </div>
+        <ul style={{ margin: 0, paddingLeft: '14px' }}>
+          <li style={{ marginBottom: '3px' }}>This Identity Card is the personal property of <strong>Arshi Enterprises</strong>.</li>
+          <li style={{ marginBottom: '3px' }}>Staff must scan this card at the RFID terminal for each Entry and Checkout.</li>
+          <li style={{ marginBottom: '3px' }}>Loss or damage of this badge must be immediately reported to Administration.</li>
+          <li>This card must be surrendered upon separation from the company.</li>
+        </ul>
       </div>
 
-      {/* Return address */}
-      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center space-y-0.5">
-        <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+      {/* Emergency & Address Box */}
+      <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 8px', textAlign: 'center' }}>
+        <div style={{ fontSize: '7px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           IF FOUND, PLEASE RETURN TO:
-        </p>
-        <p className="text-[10px] font-bold text-slate-900">
-          Arshi Enterprises Headquarters
-        </p>
-        <p className="text-[8px] font-medium text-slate-600">
-          Near- Brajesh Automobiles Mahindra Showroom
-        </p>
-        <p className="text-[8px] font-medium text-slate-600">
-          NH-31, Maranga, Purnia- 854303
-        </p>
-        <p className="text-[9px] font-mono font-bold text-red-600 mt-1">
+        </div>
+        <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#0b2a6f', marginTop: '2px' }}>
+          Arshi Enterprises Head Office
+        </div>
+        <div style={{ fontSize: '7px', color: '#334155', lineHeight: 1.3 }}>
+          Near- Brajesh Automobiles Mahindra Showroom<br />
+          NH-31, Maranga, Purnia- 854303 (Bihar)
+        </div>
+        <div style={{ fontSize: '9px', fontWeight: 'bold', color: '#c8102e', marginTop: '4px' }}>
           Helpline: 7782808063, 9199059257
-        </p>
+        </div>
       </div>
 
-      {/* Signature & Seal */}
-      <div className="pt-2 border-t border-slate-200 flex items-end justify-between">
-        <div className="w-16 h-8 border border-dashed border-slate-300 rounded flex items-center justify-center text-[7px] font-mono text-slate-400 uppercase">
+      {/* Signature & Seal Footer */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '6px' }}>
+        <div style={{ border: '1px dashed #94a3b8', borderRadius: '4px', width: '55px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', color: '#94a3b8', fontWeight: 'bold' }}>
           SEAL
         </div>
-
-        <div className="text-right">
-          <div className="h-5 font-serif italic text-xs text-slate-800 font-bold pr-2">
-            Arshi Auth.
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontFamily: "Georgia, serif", fontStyle: 'italic', fontSize: '10px', color: '#0b2a6f', fontWeight: 'bold', paddingRight: '4px' }}>
+            Authorized
           </div>
-          <div className="w-24 border-t border-slate-400" />
-          <span className="text-[7.5px] uppercase tracking-wider font-bold text-slate-500 block mt-0.5">
+          <div style={{ width: '85px', borderTop: '1px solid #475569', marginTop: '2px' }} />
+          <span style={{ fontSize: '7px', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', display: 'block', marginTop: '1px' }}>
             Authorized Signatory
           </span>
         </div>
