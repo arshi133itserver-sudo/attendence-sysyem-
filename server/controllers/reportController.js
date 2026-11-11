@@ -56,7 +56,7 @@ exports.getDateWiseReport = async (req, res) => {
     const isWeeklyOff = (setting.weeklyHolidays || [0]).includes(dayOfWeek);
     const holidayRecord = await Holiday.findOne({ date });
     const isHoliday = !!holidayRecord;
-    const defaultNonWorkingStatus = (isSunday || isWeeklyOff || isHoliday) ? 'Holiday' : 'Absent';
+    const defaultNonWorkingStatus = isHoliday ? 'Holiday' : ((isSunday || isWeeklyOff) ? 'Weekend' : 'Absent');
 
     const report = employees.map(emp => {
       const att = attMap.get(emp._id.toString());
@@ -303,10 +303,10 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
         dayStatus = 'Holiday';
       } else if (att && att.status === 'Weekend') {
         dayStatus = 'Weekend';
-      } else if (isWeeklyOff) {
-        dayStatus = 'Weekend';
       } else if (isPublicHoliday) {
         dayStatus = 'Holiday';
+      } else if (isWeeklyOff) {
+        dayStatus = 'Weekend';
       } else if (!isFuture) {
         absentDays++;
         dayStatus = 'Absent';
