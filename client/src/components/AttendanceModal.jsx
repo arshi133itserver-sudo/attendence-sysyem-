@@ -118,6 +118,14 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
             type: 'HOLIDAY',
             reason: reason || (isSunday ? 'Sunday / Weekly Holiday' : 'Company Holiday')
           });
+        } else if (manualType === 'ABSENT') {
+          // Mark Absent
+          await attendanceApi.manualEntry({
+            employeeId: selectedEmployeeId,
+            date,
+            type: 'ABSENT',
+            reason: reason || 'Marked as Absent by Admin'
+          });
         } else if (manualType === 'FULL_DAY') {
           let resolvedOut = outTimeStr;
           if (inTimeStr && outTimeStr) {
@@ -271,7 +279,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                 const newD = e.target.value;
                 setDate(newD);
                 const isSun = new Date(`${newD}T12:00:00`).getDay() === 0;
-                if (isSun && mode === 'manual' && manualType !== 'HOLIDAY') {
+                if (isSun && mode === 'manual' && manualType !== 'HOLIDAY' && manualType !== 'ABSENT') {
                   setReason('Sunday / Weekly Holiday');
                 }
               }}
@@ -285,7 +293,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Entry Mode
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <button
                   type="button"
                   onClick={() => setManualType('FULL_DAY')}
@@ -331,7 +339,21 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                       : 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
                   }`}
                 >
-                  🏖️ Mark Holiday
+                  🏖️ Holiday
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualType('ABSENT');
+                    setReason('Marked as Absent by Admin');
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    manualType === 'ABSENT'
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20'
+                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                  }`}
+                >
+                  ❌ Absent
                 </button>
               </div>
             </div>
@@ -352,8 +374,21 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
             </div>
           )}
 
-          {/* Time pickers based on mode (hidden when marking Holiday) */}
-          {manualType !== 'HOLIDAY' && (mode === 'correct' || (mode === 'manual' && manualType === 'FULL_DAY')) ? (
+          {/* Absent Information Banner in Manual Mode */}
+          {mode === 'manual' && manualType === 'ABSENT' && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-rose-700 dark:text-rose-300">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>Marking Absent {selectedEmployeeId === 'ALL' ? 'for All Active Staff' : 'for Selected Staff'}</span>
+              </div>
+              <p className="text-[11px] text-rose-600 dark:text-rose-400 leading-relaxed">
+                Selected date will be recorded as <strong>Absent</strong> (0 working hours). Any previous punch records for this date will be cleared.
+              </p>
+            </div>
+          )}
+
+          {/* Time pickers based on mode (hidden when marking Holiday or Absent) */}
+          {manualType !== 'HOLIDAY' && manualType !== 'ABSENT' && (mode === 'correct' || (mode === 'manual' && manualType === 'FULL_DAY')) ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -393,7 +428,7 @@ export default function AttendanceModal({ isOpen, onClose, recordToEdit, onSaved
                 </div>
               )}
             </div>
-          ) : manualType !== 'HOLIDAY' ? (
+          ) : manualType !== 'HOLIDAY' && manualType !== 'ABSENT' ? (
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 {manualType === 'IN' ? 'Punch IN Time' : 'Punch OUT Time'}

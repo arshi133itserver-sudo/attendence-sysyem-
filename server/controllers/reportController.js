@@ -296,6 +296,13 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
           presentDays++;
           dayStatus = att.isLate ? 'Late' : 'Present';
         }
+      } else if (att && att.status === 'Absent') {
+        absentDays++;
+        dayStatus = 'Absent';
+      } else if (att && att.status === 'Holiday') {
+        dayStatus = 'Holiday';
+      } else if (att && att.status === 'Weekend') {
+        dayStatus = 'Weekend';
       } else if (isWeeklyOff) {
         dayStatus = 'Weekend';
       } else if (isPublicHoliday) {
