@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { reportApi, employeeApi } from '../services/api';
 import { exportToExcel, exportMonthlyExcel, exportMonthlyPdf } from '../services/exportService';
 import {
@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Award,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 
 export default function MonthlyReport() {
@@ -23,6 +24,7 @@ export default function MonthlyReport() {
   });
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const cacheRef = useRef(new Map());
 
   useEffect(() => {
     employeeApi.getAll({ status: 'Active' }).then(res => {
@@ -33,12 +35,21 @@ export default function MonthlyReport() {
     }).catch(() => {});
   }, []);
 
-  const fetchMonthlyReport = async () => {
+  const fetchMonthlyReport = async (forceRefresh = false) => {
     if (!selectedEmployeeId || !selectedMonth) return;
+    const cacheKey = `${selectedEmployeeId}_${selectedMonth}`;
+
+    // Instant Render from in-memory cache if available
+    if (!forceRefresh && cacheRef.current.has(cacheKey)) {
+      setReportData(cacheRef.current.get(cacheKey));
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await reportApi.getMonthly(selectedEmployeeId, selectedMonth);
       if (res.success) {
+        cacheRef.current.set(cacheKey, res);
         setReportData(res);
       }
     } catch (err) {
@@ -85,8 +96,17 @@ export default function MonthlyReport() {
           </p>
         </div>
 
-        {/* Export Buttons */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => fetchMonthlyReport(true)}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all shadow-sm"
+            title="Refresh Latest Report Data"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
           <button
             onClick={handleExportExcel}
             disabled={!reportData}

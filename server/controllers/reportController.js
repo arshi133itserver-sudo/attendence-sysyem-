@@ -27,34 +27,40 @@ exports.getDateWiseReport = async (req, res) => {
       }
     }
 
-    const employees = await Employee.find(empQuery).sort({ employeeId: 1 });
+    const employees = await Employee.find(empQuery).sort({ employeeId: 1 }).select('-profilePhoto').lean();
     const empIds = employees.map(e => e._id);
 
-    const setting = (await Setting.findOne()) || {};
-    const attendances = await Attendance.find({
-      date,
-      employee: { $in: empIds }
-    }).populate('employee', 'employeeId fullName department designation');
+    const [settingDoc, holidayRecord, attendances] = await Promise.all([
+      Setting.findOne().lean(),
+      Holiday.findOne({ date }).lean(),
+      Attendance.find({
+        date,
+        employee: { $in: empIds }
+      }).populate('employee', 'employeeId fullName department designation').lean()
+    ]);
 
-    // Auto-repair any 0-hour closed records
+    const setting = settingDoc || {};
+
+    // In-memory calculation for any 0-hour closed records
     for (const att of attendances) {
       if (att.sessions && att.sessions.length > 0 && att.sessions[0].outTime && (!att.totalWorkingMinutes || att.totalWorkingMinutes === 0)) {
         const { recalculateAttendance } = require('../services/attendanceCalculator');
         recalculateAttendance(att, setting, att.employee);
-        await att.save();
       }
     }
 
     const attMap = new Map();
     attendances.forEach(att => {
-      attMap.set(att.employee._id.toString(), att);
+      const empIdStr = (att.employee?._id || att.employee)?.toString();
+      if (empIdStr) {
+        attMap.set(empIdStr, att);
+      }
     });
 
     // Check if the requested date is a Sunday, weekly off, or registered holiday
     const dayOfWeek = new Date(`${date}T12:00:00+05:30`).getDay();
     const isSunday = dayOfWeek === 0;
     const isWeeklyOff = (setting.weeklyHolidays || [0]).includes(dayOfWeek);
-    const holidayRecord = await Holiday.findOne({ date });
     const isHoliday = !!holidayRecord;
     const defaultNonWorkingStatus = isHoliday ? 'Holiday' : ((isSunday || isWeeklyOff) ? 'Weekend' : 'Absent');
 
@@ -181,35 +187,36 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
 
     let employee = null;
     if (employeeId.match(/^[0-9a-fA-F]{24}$/)) {
-      employee = await Employee.findById(employeeId);
+      employee = await Employee.findById(employeeId).select('-profilePhoto').lean();
     }
     if (!employee) {
-      employee = await Employee.findOne({ employeeId });
+      employee = await Employee.findOne({ employeeId }).select('-profilePhoto').lean();
     }
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
 
-    const setting = (await Setting.findOne()) || { weeklyHolidays: [0], expectedWorkingHours: 8 };
-    const holidays = await Holiday.find({ date: { $regex: `^${month}` } });
+    const [settingDoc, holidays, attendances] = await Promise.all([
+      Setting.findOne().lean(),
+      Holiday.find({ date: { $regex: `^${month}` } }).lean(),
+      Attendance.find({
+        employee: employee._id,
+        date: { $regex: `^${month}` }
+      }).sort({ date: 1 }).lean()
+    ]);
+
+    const setting = settingDoc || { weeklyHolidays: [0], expectedWorkingHours: 8 };
     const holidayDates = new Set(holidays.map(h => h.date));
 
     // Get all days of the month
     const [year, monthNum] = month.split('-').map(Number);
     const daysInMonth = new Date(year, monthNum, 0).getDate();
 
-    // Fetch all attendance records for this month
-    const attendances = await Attendance.find({
-      employee: employee._id,
-      date: { $regex: `^${month}` }
-    }).sort({ date: 1 });
-
-    // Auto-repair any 0-hour closed records
+    // In-memory calculation for any 0-hour closed records
     for (const att of attendances) {
       if (att.sessions && att.sessions.length > 0 && att.sessions[0].outTime && (!att.totalWorkingMinutes || att.totalWorkingMinutes === 0)) {
         const { recalculateAttendance } = require('../services/attendanceCalculator');
         recalculateAttendance(att, setting, employee);
-        await att.save();
       }
     }
 

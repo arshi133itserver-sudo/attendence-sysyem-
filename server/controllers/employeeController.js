@@ -40,18 +40,25 @@ exports.getEmployees = async (req, res) => {
       }
     }
 
-    const employees = await Employee.find(query).sort({ employeeId: 1 });
-    const total = await Employee.countDocuments(query);
+    let empQuery = Employee.find(query).sort({ employeeId: 1 });
+    if (req.query.includePhoto !== 'true') {
+      empQuery = empQuery.select('-profilePhoto');
+    }
+
+    const [employees, total] = await Promise.all([
+      empQuery.lean(),
+      Employee.countDocuments(query)
+    ]);
 
     // Map user portal login accounts
-    const userAccounts = await User.find({ employee: { $in: employees.map(e => e._id) } });
+    const userAccounts = await User.find({ employee: { $in: employees.map(e => e._id) } }, 'email employee').lean();
     const userMap = new Map();
     userAccounts.forEach(u => userMap.set(u.employee.toString(), u));
 
     const dataWithAccounts = employees.map(emp => {
       const u = userMap.get(emp._id.toString());
       return {
-        ...emp.toObject(),
+        ...emp,
         hasLoginAccount: !!u,
         loginEmail: u ? u.email : emp.email
       };

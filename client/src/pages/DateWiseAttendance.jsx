@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { reportApi, attendanceApi } from '../services/api';
 import { exportToExcel, exportDateWiseExcel, exportDateWisePdf } from '../services/exportService';
 import AttendanceModal from '../components/AttendanceModal';
@@ -33,13 +33,21 @@ export default function DateWiseAttendance() {
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const dateCacheRef = useRef(new Map());
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (forceRefresh = false) => {
+    const cacheKey = `${selectedDate}_${department}_${search}`;
+    if (!forceRefresh && dateCacheRef.current.has(cacheKey)) {
+      setRecords(dateCacheRef.current.get(cacheKey));
+      return;
+    }
+
     setLoading(true);
     setErrorMsg('');
     try {
       const res = await reportApi.getDateWise(selectedDate, department, search);
       if (res.success && Array.isArray(res.data)) {
+        dateCacheRef.current.set(cacheKey, res.data);
         setRecords(res.data);
       } else {
         setErrorMsg(res.message || 'Failed to load date report.');
@@ -105,6 +113,15 @@ export default function DateWiseAttendance() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={() => fetchRecords(true)}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all shadow-sm"
+            title="Refresh Attendance Data"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
           <button
             onClick={handleOpenManualEntry}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-all shadow-md shadow-brand-600/30"
@@ -338,7 +355,10 @@ export default function DateWiseAttendance() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         recordToEdit={selectedRecord}
-        onSaved={fetchRecords}
+        onSaved={() => {
+          dateCacheRef.current.clear();
+          fetchRecords(true);
+        }}
       />
     </div>
   );

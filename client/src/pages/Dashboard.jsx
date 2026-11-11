@@ -239,12 +239,6 @@ export default function Dashboard({ onOpenSimulator, onOpenAttendanceModal }) {
   useEffect(() => {
     fetchData();
 
-    // Fast Real-Time Polling: Automatically poll every 2.5 seconds!
-    // So whenever ESP32 or reader punches, this page updates automatically without clicking!
-    const pollInterval = setInterval(() => {
-      fetchData(true);
-    }, 2500);
-
     // Global USB RFID card reader listener (Key Wedge)
     // Most USB RFID readers send digits in rapid succession ending with Enter.
     const handleGlobalKeyDown = (e) => {
@@ -274,7 +268,6 @@ export default function Dashboard({ onOpenSimulator, onOpenAttendanceModal }) {
     window.addEventListener('keydown', handleGlobalKeyDown);
 
     return () => {
-      clearInterval(pollInterval);
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
   }, []);
@@ -289,8 +282,8 @@ export default function Dashboard({ onOpenSimulator, onOpenAttendanceModal }) {
               Live Attendance Dashboard
             </h1>
             <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold border border-emerald-200 dark:border-emerald-800">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              Live Sync (2s)
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              System Online
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -299,6 +292,16 @@ export default function Dashboard({ onOpenSimulator, onOpenAttendanceModal }) {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* Refresh Button */}
+          <button
+            onClick={() => fetchData()}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all shadow-sm"
+            title="Refresh Attendance Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
           {/* Voice Greeting Toggle */}
           <button
             onClick={() => {

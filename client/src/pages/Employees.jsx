@@ -51,7 +51,8 @@ export default function Employees() {
         search,
         department: department !== 'All' ? department : undefined,
         status: status !== 'All' ? status : undefined,
-        gender: genderFilter !== 'All' ? genderFilter : undefined
+        gender: genderFilter !== 'All' ? genderFilter : undefined,
+        includePhoto: 'true'
       });
       if (res.success) {
         setEmployees(res.data);
