@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rfidApi } from '../services/api';
-import { speakStaffGreeting, getTimeGreeting } from '../services/greetingService';
+import {
+  speakStaffGreeting,
+  getTimeGreeting,
+  isVoiceGreetingEnabled,
+  setVoiceGreetingEnabled,
+  unlockSpeechSynthesis
+} from '../services/greetingService';
+import VoiceSettingsModal from '../components/VoiceSettingsModal';
 import {
   CreditCard,
   Clock,
@@ -16,7 +23,9 @@ import {
   Shield,
   Sparkles,
   Wifi,
-  UserCheck
+  UserCheck,
+  Sliders,
+  Play
 } from 'lucide-react';
 
 export default function KioskMode() {
@@ -27,10 +36,12 @@ export default function KioskMode() {
 
   // Kiosk UI states
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => isVoiceGreetingEnabled());
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState(null); // { status, scanType, employee, message, ... }
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [isSpeakingTest, setIsSpeakingTest] = useState(false);
 
   // Exit PIN Modal
   const [exitModalOpen, setExitModalOpen] = useState(false);
@@ -230,14 +241,32 @@ export default function KioskMode() {
   const handleUserInteraction = () => {
     if (!audioUnlocked) {
       setAudioUnlocked(true);
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          ctx.resume();
-        }
-      } catch (_) {}
     }
+    unlockSpeechSynthesis();
+  };
+
+  // Toggle Mute / Sound
+  const handleToggleSound = (e) => {
+    if (e) e.stopPropagation();
+    const nextVal = !soundEnabled;
+    setSoundEnabled(nextVal);
+    setVoiceGreetingEnabled(nextVal);
+    if (nextVal) {
+      setAudioUnlocked(true);
+      unlockSpeechSynthesis();
+    }
+  };
+
+  // Quick Test Voice on Tablet Speaker
+  const handleQuickTestVoice = (e) => {
+    if (e) e.stopPropagation();
+    handleUserInteraction();
+    setIsSpeakingTest(true);
+    speakStaffGreeting('Rohit', 'IN', {
+      customSpokenText: 'Arshi Enterprises Smart Gate Terminal! Tablet voice greeting bilkul sahi kaam kar raha hai.',
+      time: '10:00 AM'
+    });
+    setTimeout(() => setIsSpeakingTest(false), 4000);
   };
 
   // Formatted Time Strings (Locked strictly to Indian Standard Time - Asia/Kolkata)
@@ -309,13 +338,46 @@ export default function KioskMode() {
             <span>RFID SCANNER READY</span>
           </div>
 
+          {/* Quick Voice Test Button */}
+          <button
+            onClick={handleQuickTestVoice}
+            disabled={isSpeakingTest}
+            className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
+              isSpeakingTest
+                ? 'bg-brand-600 border-brand-500 text-white animate-pulse'
+                : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-brand-300 hover:text-brand-200'
+            }`}
+            title="Tablet Speaker Test Karein"
+          >
+            <Play className={`w-3.5 h-3.5 fill-current ${isSpeakingTest ? 'animate-spin' : ''}`} />
+            <span className="hidden lg:inline">{isSpeakingTest ? 'Bol raha hai...' : 'Test Aawaz'}</span>
+          </button>
+
+          {/* Voice Model & Language Settings */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleUserInteraction();
+              setVoiceModalOpen(true);
+            }}
+            className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-pink-400 hover:text-pink-300 transition-all flex items-center gap-1.5"
+            title="Voice Settings (Aawaz Chunein)"
+          >
+            <Sliders className="w-5 h-5" />
+            <span className="hidden xl:inline text-xs font-bold">Aawaz Settings</span>
+          </button>
+
           {/* Audio Mute/Unmute */}
           <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 transition-all"
-            title={soundEnabled ? 'Voice Greeting Enabled' : 'Voice Greeting Muted'}
+            onClick={handleToggleSound}
+            className={`p-2.5 rounded-xl border transition-all ${
+              soundEnabled
+                ? 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-emerald-400'
+                : 'bg-rose-950/40 hover:bg-rose-900/40 border-rose-800/80 text-rose-400'
+            }`}
+            title={soundEnabled ? 'Voice Greeting Enabled (Click to Mute)' : 'Voice Greeting Muted (Click to Unmute)'}
           >
-            {soundEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5 text-slate-500" />}
+            {soundEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5 text-rose-400" />}
           </button>
 
           {/* Fullscreen Toggle */}
@@ -342,6 +404,25 @@ export default function KioskMode() {
           </button>
         </div>
       </header>
+
+      {/* Tablet Audio Autoplay Activation Banner */}
+      {!audioUnlocked && (
+        <div
+          onClick={handleUserInteraction}
+          className="relative z-20 mx-4 sm:mx-8 mt-4 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-brand-500/20 to-indigo-500/20 border-2 border-amber-500/50 text-amber-200 text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer hover:bg-amber-500/30 transition-all shadow-xl animate-pulse"
+        >
+          <div className="flex items-center gap-2.5">
+            <Volume2 className="w-5 h-5 text-amber-400 shrink-0" />
+            <span>Tablet Speaker Active karne ke liye screen par touch karein (Tap to activate Voice Greeting)</span>
+          </div>
+          <button
+            onClick={handleUserInteraction}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shrink-0 shadow-md hover:bg-amber-300"
+          >
+            ACTIVATE NOW 🔊
+          </button>
+        </div>
+      )}
 
       {/* Main Center Display */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto w-full">
@@ -586,6 +667,13 @@ export default function KioskMode() {
             </form>
           </div>
         </div>
+      )}
+      {/* Voice Model & Greeting Settings Modal */}
+      {voiceModalOpen && (
+        <VoiceSettingsModal
+          isOpen={voiceModalOpen}
+          onClose={() => setVoiceModalOpen(false)}
+        />
       )}
     </div>
   );

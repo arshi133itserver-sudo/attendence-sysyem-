@@ -47,6 +47,24 @@ export function saveVoiceSettings(settings = {}) {
   } catch (e) {}
 }
 
+// Global voice cache to solve async loading in Chrome & Android tablets
+let cachedVoices = [];
+function updateCachedVoices() {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    const list = window.speechSynthesis.getVoices() || [];
+    if (list.length > 0) {
+      cachedVoices = list;
+    }
+  }
+}
+
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  updateCachedVoices();
+  window.speechSynthesis.onvoiceschanged = () => {
+    updateCachedVoices();
+  };
+}
+
 /**
  * Score and rank a voice for human sweetness & natural warmth
  * Higher score = more human-like, sweeter, less robotic.
@@ -76,13 +94,14 @@ function scoreVoice(v) {
   if (name.includes('samantha')) score += 30;
   if (name.includes('victoria')) score += 25;
   if (name.includes('karen')) score += 25;
-  if (name.includes('google')) score += 25;
+  if (name.includes('google')) score += 30;
+  if (name.includes('samsung')) score += 25;
 
-  // Language bonuses
-  if (lang.startsWith('en-in') || lang.startsWith('hi')) score += 25;
+  // Language bonuses - prefer Indian English and Hindi
+  if (lang.startsWith('en-in') || lang.startsWith('hi')) score += 40;
   else if (lang.startsWith('en')) score += 15;
 
-  if (name.includes('female')) score += 20;
+  if (name.includes('female') || name.includes('woman')) score += 20;
 
   return score;
 }
@@ -92,7 +111,8 @@ function scoreVoice(v) {
  */
 export function getAvailableVoices() {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return [];
-  const voices = window.speechSynthesis.getVoices() || [];
+  const voices = (cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices()) || [];
+  if (voices.length > 0) cachedVoices = voices;
   return [...voices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
 }
 
@@ -101,7 +121,7 @@ export function getAvailableVoices() {
  */
 export function getResolvedVoice() {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices() || [];
+  const voices = (cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices()) || [];
   if (voices.length === 0) return null;
 
   const settings = getVoiceSettings();
@@ -206,6 +226,42 @@ export function generateGreetingText(staffName, scanType = 'IN', options = {}) {
 }
 
 /**
+ * Unlock SpeechSynthesis and Web Audio on Tablets & Mobile Browsers
+ * Must be triggered on user interaction (touch/click) to bypass autoplay restrictions.
+ */
+export function unlockSpeechSynthesis() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // 1. Resume Web AudioContext if available
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    }
+
+    // 2. Resume & unpause speechSynthesis
+    if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      // Speak a silent micro-utterance to prime the browser TTS engine
+      const dummy = new SpeechSynthesisUtterance(' ');
+      dummy.volume = 0.01;
+      dummy.rate = 1.0;
+      window._unlockUtterance = dummy;
+      dummy.onend = () => { window._unlockUtterance = null; };
+      dummy.onerror = () => { window._unlockUtterance = null; };
+      window.speechSynthesis.speak(dummy);
+    }
+  } catch (e) {
+    console.warn('Could not unlock speech synthesis:', e);
+  }
+}
+
+/**
  * Speak greeting aloud with gentle, natural, human pacing
  */
 export function speakStaffGreeting(staffName, scanType = 'IN', options = {}) {
@@ -213,6 +269,10 @@ export function speakStaffGreeting(staffName, scanType = 'IN', options = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
   try {
+    // Unpause if stalled on Android Chrome
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     window.speechSynthesis.cancel();
 
     const settings = getVoiceSettings();
@@ -228,9 +288,32 @@ export function speakStaffGreeting(staffName, scanType = 'IN', options = {}) {
     const voice = getResolvedVoice();
     if (voice) {
       utterance.voice = voice;
+      utterance.lang = voice.lang || 'en-IN';
+    } else {
+      utterance.lang = 'en-IN';
     }
 
-    window.speechSynthesis.speak(utterance);
+    // Protect from Chromium / Android garbage collection bug
+    window._activeStaffUtterance = utterance;
+    utterance.onend = () => {
+      window._activeStaffUtterance = null;
+    };
+    utterance.onerror = (e) => {
+      console.warn('SpeechSynthesis utterance event:', e);
+      window._activeStaffUtterance = null;
+    };
+
+    // Small delay so cancel() clears queue before speak()
+    setTimeout(() => {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('Speech synthesis speak execution error:', err);
+      }
+    }, 40);
   } catch (err) {
     console.error('Speech synthesis error:', err);
   }
