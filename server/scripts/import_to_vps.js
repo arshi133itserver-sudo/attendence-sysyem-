@@ -2,14 +2,65 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 
-async function importToVps() {
-  const targetUri = process.argv[2] || process.env.TARGET_MONGODB_URI;
+const OBJECT_ID_FIELDS = new Set([
+  '_id',
+  'employee',
+  'employeeDbId',
+  'correctedBy',
+  'modifiedBy',
+  'userId',
+  'attendanceId'
+]);
 
-  if (!targetUri) {
-    console.error('ERROR: Please provide target MongoDB URI.');
-    console.log('Usage: node scripts/import_to_vps.js "mongodb://username:password@YOUR_VPS_IP:27017/arshi_attendance"');
-    process.exit(1);
+const DATE_FIELDS = new Set([
+  'createdAt',
+  'updatedAt',
+  'joiningDate',
+  'dob',
+  'firstInTime',
+  'lastOutTime',
+  'inTime',
+  'outTime',
+  'timestamp',
+  'scannedAt',
+  'modifiedAt',
+  'entryTime',
+  'zktecoLastSyncTime'
+]);
+
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+const HEX_24_REGEX = /^[0-9a-fA-F]{24}$/;
+
+function reviveBson(obj, keyName = '') {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof obj === 'string') {
+    if (OBJECT_ID_FIELDS.has(keyName) && HEX_24_REGEX.test(obj)) {
+      return new mongoose.Types.ObjectId(obj);
+    }
+    if ((DATE_FIELDS.has(keyName) || ISO_DATE_REGEX.test(obj)) && !isNaN(Date.parse(obj))) {
+      return new Date(obj);
+    }
+    return obj;
   }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => reviveBson(item, keyName));
+  }
+
+  if (typeof obj === 'object') {
+    const revived = {};
+    for (const [k, v] of Object.entries(obj)) {
+      revived[k] = reviveBson(v, k);
+    }
+    return revived;
+  }
+
+  return obj;
+}
+
+async function importToVps() {
+  const targetUri = process.argv[2] || process.env.TARGET_MONGODB_URI || 'mongodb://189.72.151.50:27017/arshi_attendance';
 
   const backupPath = path.join(__dirname, '../backup/arshi_attendance_backup.json');
   if (!fs.existsSync(backupPath)) {
@@ -24,22 +75,23 @@ async function importToVps() {
   await mongoose.connect(targetUri);
   console.log('Connected successfully to VPS MongoDB!\n');
 
-  for (const [collectionName, docs] of Object.entries(backupData)) {
-    if (!docs || docs.length === 0) {
+  for (const [collectionName, rawDocs] of Object.entries(backupData)) {
+    if (!rawDocs || rawDocs.length === 0) {
       console.log(`- ${collectionName}: 0 documents (Skipped)`);
       continue;
     }
 
     const col = mongoose.connection.db.collection(collectionName);
-    // Optional: clear existing records in target collection to avoid duplicate key errors
     await col.deleteMany({});
+
+    // Revive BSON types (ObjectIds and Dates)
+    const revivedDocs = rawDocs.map(doc => reviveBson(doc));
     
-    // Insert documents
-    const result = await col.insertMany(docs);
-    console.log(`- ${collectionName}: Restored ${result.insertedCount} documents`);
+    const result = await col.insertMany(revivedDocs);
+    console.log(`- ${collectionName}: Restored ${result.insertedCount} documents with valid BSON ObjectIds & Dates`);
   }
 
-  console.log('\nAll data has been successfully imported to your VPS MongoDB!');
+  console.log('\nAll collections successfully restored with native BSON types!');
   await mongoose.disconnect();
 }
 

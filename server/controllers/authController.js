@@ -67,10 +67,7 @@ exports.login = async (req, res) => {
 // Get current profile
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate({
-      path: 'employee',
-      populate: { path: 'department' }
-    });
+    const user = await User.findById(req.user._id).populate('employee');
 
     return res.status(200).json({
       success: true,
