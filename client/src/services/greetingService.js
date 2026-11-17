@@ -66,10 +66,10 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 }
 
 /**
- * Score and rank a voice for human sweetness & natural warmth
- * Higher score = more human-like, sweeter, less robotic.
+ * Score and rank a voice for human sweetness, Indian warmth & Jarvis clarity
+ * Higher score = more human-like, natural, and fitting for selected style.
  */
-function scoreVoice(v) {
+function scoreVoice(v, targetStyle = '') {
   const name = (v.name || '').toLowerCase();
   const lang = (v.lang || '').toLowerCase();
 
@@ -84,24 +84,35 @@ function scoreVoice(v) {
   // Heavily reward Natural / Neural online voices
   if (name.includes('natural') || name.includes('neural') || name.includes('online')) score += 50;
 
-  // Reward sweet female & warm Indian voices
-  if (name.includes('zira')) score += 35;
-  if (name.includes('jenny')) score += 45;
-  if (name.includes('aria')) score += 40;
-  if (name.includes('neerja')) score += 45;
-  if (name.includes('swara')) score += 45;
-  if (name.includes('heera')) score += 35;
-  if (name.includes('samantha')) score += 30;
-  if (name.includes('victoria')) score += 25;
-  if (name.includes('karen')) score += 25;
-  if (name.includes('google')) score += 30;
+  // Style specific scoring:
+  if (targetStyle === 'jarvis_hindi') {
+    // JARVIS AI (Indian Male, calm, baritone)
+    if (name.includes('madhur')) score += 70; // Microsoft Madhur (Hindi Natural Male)
+    if (name.includes('prabhat')) score += 65; // Microsoft Prabhat (English India Male)
+    if (name.includes('ravi') || name.includes('neil')) score += 50;
+    if (name.includes('male') || name.includes('man') || name.includes('guy')) score += 40;
+    if (name.includes('female') || name.includes('woman') || name.includes('girl')) score -= 50;
+  } else {
+    // Sweet Indian Female (Default / Sweet Hindi / Sweet Hinglish)
+    if (name.includes('swara')) score += 70;  // Microsoft Swara (Hindi Natural Female - Sweetest)
+    if (name.includes('neerja')) score += 65; // Microsoft Neerja (English India Natural Female)
+    if (name.includes('heera')) score += 55;
+    if (name.includes('jenny')) score += 50;
+    if (name.includes('aria')) score += 45;
+    if (name.includes('zira')) score += 35;
+    if (name.includes('samantha')) score += 30;
+    if (name.includes('female') || name.includes('woman')) score += 35;
+    if (name.includes('male') || name.includes('david') || name.includes('mark')) score -= 40;
+  }
+
+  // Google / Samsung Indian Voices on Android tablets
+  if (name.includes('google')) score += 35;
   if (name.includes('samsung')) score += 25;
 
-  // Language bonuses - prefer Indian English and Hindi
-  if (lang.startsWith('en-in') || lang.startsWith('hi')) score += 40;
+  // Language bonuses - prefer Indian Hindi and Indian English
+  if (lang.startsWith('hi')) score += 45;
+  else if (lang.startsWith('en-in')) score += 40;
   else if (lang.startsWith('en')) score += 15;
-
-  if (name.includes('female') || name.includes('woman')) score += 20;
 
   return score;
 }
@@ -109,22 +120,23 @@ function scoreVoice(v) {
 /**
  * Returns all available browser voices, sorted from sweetest/most human to robotic
  */
-export function getAvailableVoices() {
+export function getAvailableVoices(targetStyle = '') {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return [];
   const voices = (cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices()) || [];
   if (voices.length > 0) cachedVoices = voices;
-  return [...voices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+  return [...voices].sort((a, b) => scoreVoice(b, targetStyle) - scoreVoice(a, targetStyle));
 }
 
 /**
  * Resolves the active voice to use
  */
-export function getResolvedVoice() {
+export function getResolvedVoice(preferredStyle = null) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
   const voices = (cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices()) || [];
   if (voices.length === 0) return null;
 
   const settings = getVoiceSettings();
+  const currentStyle = preferredStyle || settings.style || 'sweet_hinglish';
 
   // 1. User chosen voice
   if (settings.voiceName) {
@@ -132,8 +144,8 @@ export function getResolvedVoice() {
     if (chosen) return chosen;
   }
 
-  // 2. Pick top-ranked sweet voice
-  const sorted = [...voices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+  // 2. Pick top-ranked sweet / Jarvis voice based on current style
+  const sorted = [...voices].sort((a, b) => scoreVoice(b, currentStyle) - scoreVoice(a, currentStyle));
   return sorted[0] || voices[0];
 }
 
@@ -183,15 +195,25 @@ export function generateGreetingText(staffName, scanType = 'IN', options = {}) {
   const isHindiVoice = activeVoice && (activeVoice.lang.startsWith('hi') || activeVoice.name.toLowerCase().includes('hindi') || activeVoice.name.toLowerCase().includes('swara'));
 
   if (scanType === 'IN') {
-    // Check-in (Welcome)
-    if (style === 'pure_hindi' && isHindiVoice) {
+    // 1. JARVIS AI (Calm, baritone, respectful Hindi)
+    if (style === 'jarvis_hindi') {
       let timeHindi = 'शुभ प्रभात';
       if (hour >= 12 && hour < 17) timeHindi = 'शुभ दोपहर';
       else if (hour >= 17) timeHindi = 'शुभ संध्या';
 
-      return `नमस्ते ${cleanName} जी! ${timeHindi}, आर्शी एंटरप्राइजेज में आपका हार्दिक स्वागत है। आपका दिन शुभ और मंगलमय हो!`;
+      return `नमस्ते ${cleanName}! ${timeHindi}। आर्शी एंटरप्राइजेज में आपका स्वागत है। आपकी एंट्री समय पर दर्ज हो चुकी है। हैव अ प्रोडक्टिव डे।`;
     }
 
+    // 2. Sweet & Lovely Hindi (Warm, pyari, respectful)
+    if (style === 'sweet_hindi' || style === 'pure_hindi') {
+      let timeHindi = 'शुभ प्रभात';
+      if (hour >= 12 && hour < 17) timeHindi = 'शुभ दोपहर';
+      else if (hour >= 17) timeHindi = 'शुभ संध्या';
+
+      return `नमस्ते ${cleanName} जी! ${timeHindi}। आर्शी एंटरप्राइजेज में आपका बहुत-बहुत स्वागत है। आपका दिन बहुत शुभ और प्यारा हो!`;
+    }
+
+    // 3. Sweet Hinglish (Friendly Indian Corporate)
     if (style === 'sweet_hinglish') {
       let timeWord = 'Good morning';
       if (hour >= 12 && hour < 17) timeWord = 'Good afternoon';
@@ -200,25 +222,36 @@ export function generateGreetingText(staffName, scanType = 'IN', options = {}) {
       return `Welcome, ${cleanName} ji! Wishing you a very ${timeWord}. Your entry is marked at ${punchTime}. Have a happy and productive day at Arshi Enterprises!`;
     }
 
-    // Default: Sweet Polite English
+    // 4. Default: Sweet Polite English
     let timeWord = 'Good morning';
     if (hour >= 12 && hour < 17) timeWord = 'Good afternoon';
     else if (hour >= 17) timeWord = 'Good evening';
 
     return `Welcome, ${cleanName}! Wishing you a wonderful ${timeWord}. Your entry is registered at ${punchTime}. Have a great day at Arshi Enterprises!`;
   } else {
-    // Checkout (Check-out)
-    if (style === 'pure_hindi' && isHindiVoice) {
-      return `धन्यवाद ${cleanName} जी! आपका चेकआउट सफल रहा। शुभ संध्या, अपना ख्याल रखें, अलविदा!`;
+    // Checkout (Clock Out)
+    // 1. JARVIS AI
+    if (style === 'jarvis_hindi') {
+      const hrsText = options.totalHours ? ` आज का कुल कार्य समय: ${options.totalHours}।` : '';
+      const exitWish = hour >= 18 ? 'शुभ रात्रि, अपना ख्याल रखें।' : (hour >= 12 ? 'शुभ दोपहर, आपका समय मंगलमय हो।' : 'अलविदा!');
+      return `धन्यवाद ${cleanName}! चेकआउट सफल रहा।${hrsText} ${exitWish}`;
     }
 
+    // 2. Sweet & Lovely Hindi
+    if (style === 'sweet_hindi' || style === 'pure_hindi') {
+      const hrsText = options.totalHours ? ` आज आपने ${options.totalHours} काम किया।` : '';
+      const exitWish = hour >= 18 ? 'शुभ रात्रि, अपना अच्छे से ख्याल रखिएगा!' : 'आपका दिन बहुत अच्छा रहे!';
+      return `बहुत-बहुत धन्यवाद ${cleanName} जी! आपका चेकआउट पूरा हो गया है।${hrsText} ${exitWish}`;
+    }
+
+    // 3. Sweet Hinglish
     if (style === 'sweet_hinglish') {
       const exitWish = hour >= 18 ? 'Wishing you a peaceful evening and a good night!' : (hour >= 12 ? 'Have a wonderful afternoon!' : 'Have a wonderful day!');
       const hrsText = options.totalHours ? ` Total duty time today: ${options.totalHours}.` : '';
       return `Thank you so much, ${cleanName} ji! Checkout successful at ${punchTime}.${hrsText} ${exitWish} Take care, and goodbye!`;
     }
 
-    // Default: Sweet Polite English
+    // 4. Default: Sweet Polite English
     const exitWish = hour >= 18 ? 'Wishing you a relaxing evening!' : (hour >= 12 ? 'Have a wonderful afternoon!' : 'Have a wonderful day!');
     const hrsText = options.totalHours ? ` Total working hours: ${options.totalHours}.` : '';
     return `Thank you, ${cleanName}! Checkout successful at ${punchTime}.${hrsText} ${exitWish} Take care, and goodbye!`;

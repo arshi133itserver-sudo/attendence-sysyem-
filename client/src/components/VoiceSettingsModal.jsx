@@ -130,30 +130,96 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
             <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Greeting Tone & Language Style:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* JARVIS HINDI AI */}
               <button
                 type="button"
-                onClick={() => setStyle('sweet_hinglish')}
+                onClick={() => {
+                  setStyle('jarvis_hindi');
+                  setRate(0.92);
+                  setPitch(0.92);
+                  setSelectedVoice('');
+                }}
+                className={`p-3 rounded-2xl border text-left transition-all ${
+                  style === 'jarvis_hindi'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 shadow-md ring-1 ring-indigo-500'
+                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                <div className="font-bold flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span>🤖</span> Hindi Jarvis (AI Assistant)
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
+                    Male AI
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                  "नमस्ते Rohit! शुभ प्रभात। आर्शी एंटरप्राइजेज में आपका स्वागत है। आपकी एंट्री दर्ज हो चुकी है। हैव अ प्रोडक्टिव डे।"
+                </div>
+              </button>
+
+              {/* SWEET & LOVELY HINDI */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStyle('sweet_hindi');
+                  setRate(0.88);
+                  setPitch(1.05);
+                  setSelectedVoice('');
+                }}
+                className={`p-3 rounded-2xl border text-left transition-all ${
+                  style === 'sweet_hindi' || style === 'pure_hindi'
+                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 shadow-md ring-1 ring-pink-500'
+                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                <div className="font-bold flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span>🌸</span> Sweet & Lovely Hindi
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-400">
+                    Pyari Female
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                  "नमस्ते Rohit जी! शुभ प्रभात। आर्शी एंटरप्राइजेज में आपका बहुत-बहुत स्वागत है। आपका दिन शुभ और प्यारा हो!"
+                </div>
+              </button>
+
+              {/* POLITE HINGLISH */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStyle('sweet_hinglish');
+                  setRate(0.90);
+                  setPitch(1.0);
+                }}
                 className={`p-3 rounded-2xl border text-left transition-all ${
                   style === 'sweet_hinglish'
-                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 shadow-sm'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-sm ring-1 ring-emerald-500'
                     : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                 }`}
               >
                 <div className="font-bold flex items-center gap-1.5 text-xs">
-                  <span>🌸</span> Polite Hinglish
+                  <span>🇮🇳</span> Polite Hinglish (Corporate)
                 </div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                  "Welcome Parbhat ji! Wishing you a very Good morning..."
+                  "Welcome Rohit ji! Wishing you a very Good morning. Entry marked at 10:00 AM..."
                 </div>
               </button>
 
+              {/* SWEET ENGLISH */}
               <button
                 type="button"
-                onClick={() => setStyle('sweet_english')}
+                onClick={() => {
+                  setStyle('sweet_english');
+                  setRate(0.90);
+                  setPitch(1.0);
+                }}
                 className={`p-3 rounded-2xl border text-left transition-all ${
                   style === 'sweet_english'
-                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 shadow-sm'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 shadow-sm'
                     : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                 }`}
               >
@@ -161,24 +227,7 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
                   <span>💼</span> Sweet English
                 </div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                  "Welcome, Parbhat! Wishing you a wonderful morning..."
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStyle('pure_hindi')}
-                className={`p-3 rounded-2xl border text-left transition-all ${
-                  style === 'pure_hindi'
-                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                }`}
-              >
-                <div className="font-bold flex items-center gap-1.5 text-xs">
-                  <span>🇮🇳</span> Pure Hindi
-                </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                  "नमस्ते प्रभात जी! शुभ प्रभात, आर्शी एंटरप्राइजेज में आपका स्वागत है..."
+                  "Welcome, Rohit! Wishing you a wonderful morning. Have a great day at Arshi Enterprises!"
                 </div>
               </button>
             </div>
