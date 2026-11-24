@@ -69,10 +69,59 @@ exports.submitSelfieRequest = async (req, res) => {
       selfiePhoto,
       remarks: remarks || `Selfie ${cleanType} request by ${employee.fullName}`,
       location: location || null,
-      status: 'Pending'
+      status: 'Approved',
+      reviewedAt: snapTime
     });
 
     await newRequest.save();
+
+    // Auto-approve and directly record punch in daily Attendance model
+    try {
+      const setting = (await Setting.findOne()) || {};
+      let attendance = await Attendance.findOne({ employee: employee._id, date: dateStr });
+
+      if (!attendance) {
+        attendance = new Attendance({
+          employee: employee._id,
+          date: dateStr,
+          sessions: []
+        });
+      }
+
+      const sessions = attendance.sessions;
+
+      if (cleanType === 'IN') {
+        sessions.push({
+          inTime: snapTime,
+          outTime: null,
+          inDeviceId: 'SELFIE_DIRECT',
+          durationMinutes: 0
+        });
+      } else if (cleanType === 'OUT') {
+        if (sessions.length > 0 && sessions[sessions.length - 1].outTime === null) {
+          const lastSession = sessions[sessions.length - 1];
+          lastSession.outTime = snapTime;
+          lastSession.outDeviceId = 'SELFIE_DIRECT';
+          lastSession.durationMinutes = Math.max(0, Math.round((snapTime - lastSession.inTime) / 60000));
+        } else {
+          const defaultInTime = new Date(`${dateStr}T09:00:00`);
+          let actualIn = defaultInTime;
+          if (snapTime < defaultInTime) actualIn = snapTime;
+          sessions.push({
+            inTime: actualIn,
+            outTime: snapTime,
+            inDeviceId: 'SELFIE_DIRECT',
+            outDeviceId: 'SELFIE_DIRECT',
+            durationMinutes: Math.max(0, Math.round((snapTime - actualIn) / 60000))
+          });
+        }
+      }
+
+      recalculateAttendance(attendance, setting, employee);
+      await attendance.save();
+    } catch (attErr) {
+      console.warn('⚠️ [Attendance Auto-Record Error]:', attErr.message);
+    }
 
     // Asynchronously trigger instant WhatsApp Group / Admin alert (non-blocking)
     whatsappService.sendSelfiePunchAlert({
@@ -88,19 +137,19 @@ exports.submitSelfieRequest = async (req, res) => {
 
     // Log in RawScanLog for visibility
     await RawScanLog.create({
-      cardUid: employee.rfidCardUid || 'SELFIE_MANUAL',
+      cardUid: employee.rfidCardUid || 'SELFIE_DIRECT',
       employee: employee._id,
       deviceId: 'STAFF_SELFIE_APP',
       timestamp: snapTime,
       scanType: cleanType,
-      status: 'SELFIE_PENDING',
-      message: `Pending Selfie ${cleanType} request submitted by ${employee.fullName}`,
-      rawPayload: { requestId: newRequest._id, remarks }
+      status: 'SELFIE_RECORDED',
+      message: `Direct Selfie ${cleanType} recorded by ${employee.fullName}`,
+      rawPayload: { requestId: newRequest._id, remarks, location }
     });
 
     return res.status(201).json({
       success: true,
-      message: `Selfie ${cleanType} attendance request submitted! It will be verified and approved by Admin.`,
+      message: `Attendance marked successfully! Clock ${cleanType} recorded.`,
       data: newRequest
     });
   } catch (error) {
