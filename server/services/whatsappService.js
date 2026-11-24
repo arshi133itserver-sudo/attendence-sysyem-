@@ -1,8 +1,22 @@
 const path = require('path');
 const fs = require('fs');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const pino = require('pino');
-const QRCode = require('qrcode');
+let makeWASocket = null;
+let useMultiFileAuthState = null;
+let DisconnectReason = null;
+let pino = null;
+let QRCode = null;
+
+try {
+  const baileys = require('@whiskeysockets/baileys');
+  makeWASocket = baileys.default || baileys;
+  useMultiFileAuthState = baileys.useMultiFileAuthState;
+  DisconnectReason = baileys.DisconnectReason;
+  pino = require('pino');
+  QRCode = require('qrcode');
+} catch (loadErr) {
+  console.warn('ℹ️ [WhatsApp Service] Baileys/QRCode module not loaded or in serverless environment:', loadErr.message);
+}
+
 const Setting = require('../models/Setting');
 
 class WhatsAppService {
@@ -17,6 +31,12 @@ class WhatsAppService {
 
   // Initialize Baileys Socket
   async init() {
+    // If running in Vercel serverless or Baileys not loaded, do not start persistent socket
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || !makeWASocket || !useMultiFileAuthState) {
+      console.log('ℹ️ [WhatsApp Service] Skipping persistent socket in serverless/Vercel mode.');
+      return;
+    }
+
     if (this.isInitializing) return;
     this.isInitializing = true;
 
