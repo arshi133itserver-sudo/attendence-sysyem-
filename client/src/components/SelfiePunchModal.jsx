@@ -18,6 +18,9 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { attendanceRequestApi } from '../services/api';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+const WhatsAppShare = registerPlugin('WhatsAppShare');
 
 export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employee }) {
   const [stream, setStream] = useState(null);
@@ -238,7 +241,20 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
       '✅ *Status: DIRECTLY RECORDED IN SYSTEM*'
     ].filter(Boolean).join('\n');
 
-    // 1. Try Native Android Web Share with Image File
+    // 1. Android APK Native Share via our WhatsAppShare Plugin (Attaches real image + caption)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await WhatsAppShare.share({
+          photo: photo,
+          text: shareText
+        });
+        return;
+      } catch (nativeErr) {
+        console.warn('Native WhatsAppShare error:', nativeErr);
+      }
+    }
+
+    // 2. Web browser: Web Share API if supported
     if (photo && navigator.canShare) {
       try {
         const res = await fetch(photo);
@@ -258,17 +274,12 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
       }
     }
 
-    // 2. Fallback to WhatsApp URL scheme
-    const waUrl = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
-    const webWaUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-
+    // 3. Fallback: Open WhatsApp API in new window (NEVER window.location.href)
     try {
-      window.location.href = waUrl;
-      setTimeout(() => {
-        window.open(webWaUrl, '_blank');
-      }, 800);
-    } catch (_) {
-      window.open(webWaUrl, '_blank');
+      const webWaUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(webWaUrl, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.warn('WhatsApp fallback window open failed:', e);
     }
   };
 

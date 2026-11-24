@@ -5,8 +5,7 @@
   "server": {
     "androidScheme": "https",
     "allowNavigation": [
-      "attendence-sysyem.vercel.app",
-      "*"
+      "attendence-sysyem.vercel.app"
     ]
   },
   "android": {
