@@ -72,6 +72,7 @@ app.use('/api/attendance-requests', require('./routes/attendanceRequestRoutes'))
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

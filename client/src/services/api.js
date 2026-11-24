@@ -204,3 +204,26 @@ export const zktecoApi = {
       body: JSON.stringify({ content })
     })
 };
+
+export const whatsappApi = {
+  getStatus: () => apiRequest('/whatsapp/status'),
+  getGroups: () => apiRequest('/whatsapp/groups'),
+  updateConfig: (data) =>
+    apiRequest('/whatsapp/config', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  sendTest: (targetJid) =>
+    apiRequest('/whatsapp/test', {
+      method: 'POST',
+      body: JSON.stringify({ targetJid })
+    }),
+  logout: () =>
+    apiRequest('/whatsapp/logout', {
+      method: 'POST'
+    }),
+  restart: () =>
+    apiRequest('/whatsapp/restart', {
+      method: 'POST'
+    })
+};

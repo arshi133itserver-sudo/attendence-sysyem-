@@ -107,6 +107,31 @@ const SettingSchema = new mongoose.Schema({
   zktecoLastSyncTime: {
     type: Date,
     default: null
+  },
+  // WhatsApp Group & Admin Notification Configuration
+  whatsappNotificationsEnabled: {
+    type: Boolean,
+    default: true
+  },
+  whatsappGroupId: {
+    type: String,
+    default: '' // Target WhatsApp Group JID (e.g., 120363025123456789@g.us)
+  },
+  whatsappGroupName: {
+    type: String,
+    default: ''
+  },
+  whatsappAdminPhone: {
+    type: String,
+    default: '' // Admin individual phone number (e.g. 917782808063)
+  },
+  whatsappApiGatewayUrl: {
+    type: String,
+    default: '' // Optional external HTTP gateway URL (Green API / UltraMsg / CallMeBot)
+  },
+  whatsappApiGatewayToken: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true

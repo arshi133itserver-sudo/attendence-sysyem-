@@ -4,6 +4,7 @@ const Employee = require('../models/Employee');
 const Setting = require('../models/Setting');
 const RawScanLog = require('../models/RawScanLog');
 const AuditLog = require('../models/AuditLog');
+const whatsappService = require('../services/whatsappService');
 const { recalculateAttendance, formatMinutes } = require('../services/attendanceCalculator');
 const { getLocalDateString } = require('../utils/dateUtils');
 
@@ -72,6 +73,18 @@ exports.submitSelfieRequest = async (req, res) => {
     });
 
     await newRequest.save();
+
+    // Asynchronously trigger instant WhatsApp Group / Admin alert (non-blocking)
+    whatsappService.sendSelfiePunchAlert({
+      request: newRequest,
+      employee,
+      cleanType,
+      snapTime,
+      remarks,
+      location
+    }).catch(err => {
+      console.warn('⚠️ [WhatsApp] Notification failed:', err.message);
+    });
 
     // Log in RawScanLog for visibility
     await RawScanLog.create({

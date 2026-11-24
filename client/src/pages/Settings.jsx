@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { settingsApi, zktecoApi } from '../services/api';
+import { settingsApi, zktecoApi, whatsappApi } from '../services/api';
 import {
   Settings as SettingsIcon,
   Clock,
@@ -20,7 +20,13 @@ import {
   Wifi,
   Server,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  MessageSquare,
+  Send,
+  QrCode,
+  Phone,
+  LogOut,
+  ExternalLink
 } from 'lucide-react';
 
 export default function Settings() {
@@ -195,6 +201,107 @@ export default function Settings() {
     } finally {
       setUploadingLog(false);
       e.target.value = '';
+    }
+  };
+
+  // WhatsApp Notification State & Handlers
+  const [waStatus, setWaStatus] = useState({
+    isConnected: false,
+    hasQr: false,
+    qrDataUrl: null,
+    configuredGroupId: '',
+    configuredGroupName: '',
+    configuredAdminPhone: '',
+    notificationsEnabled: true
+  });
+  const [waGroups, setWaGroups] = useState([]);
+  const [waLoading, setWaLoading] = useState(false);
+  const [waTesting, setWaTesting] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+  const [waTestAlert, setWaTestAlert] = useState(null);
+
+  const loadWaStatus = async () => {
+    try {
+      const res = await whatsappApi.getStatus();
+      if (res.success && res.data) {
+        setWaStatus((prev) => ({
+          ...prev,
+          ...res.data
+        }));
+        if (res.data.isConnected) {
+          loadWaGroups();
+        }
+      }
+    } catch (e) {
+      console.warn('WhatsApp status polling error:', e.message);
+    }
+  };
+
+  const loadWaGroups = async () => {
+    try {
+      const res = await whatsappApi.getGroups();
+      if (res.success && Array.isArray(res.data)) {
+        setWaGroups(res.data);
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadWaStatus();
+    const waTimer = setInterval(() => {
+      loadWaStatus();
+    }, 4000);
+    return () => clearInterval(waTimer);
+  }, []);
+
+  const handleSaveWaConfig = async () => {
+    setWaSaving(true);
+    setWaTestAlert(null);
+    try {
+      const res = await whatsappApi.updateConfig({
+        whatsappGroupId: waStatus.configuredGroupId,
+        whatsappGroupName: waStatus.configuredGroupName,
+        whatsappAdminPhone: waStatus.configuredAdminPhone,
+        whatsappNotificationsEnabled: waStatus.notificationsEnabled
+      });
+      if (res.success) {
+        setWaTestAlert({ type: 'success', text: 'WhatsApp configuration saved successfully!' });
+      }
+    } catch (err) {
+      setWaTestAlert({ type: 'error', text: err.message || 'Failed to save configuration.' });
+    } finally {
+      setWaSaving(false);
+    }
+  };
+
+  const handleTestWa = async () => {
+    setWaTesting(true);
+    setWaTestAlert(null);
+    try {
+      const target = waStatus.configuredGroupId || waStatus.configuredAdminPhone;
+      const res = await whatsappApi.sendTest(target);
+      if (res.success) {
+        setWaTestAlert({ type: 'success', text: res.message || 'Test alert message sent to WhatsApp!' });
+      } else {
+        setWaTestAlert({ type: 'error', text: res.message || 'Failed to send test message.' });
+      }
+    } catch (err) {
+      setWaTestAlert({ type: 'error', text: err.message || 'Error sending test message.' });
+    } finally {
+      setWaTesting(false);
+    }
+  };
+
+  const handleLogoutWa = async () => {
+    if (!window.confirm('Are you sure you want to unlink WhatsApp? You will need to scan QR code again.')) return;
+    setWaLoading(true);
+    try {
+      await whatsappApi.logout();
+      await loadWaStatus();
+    } catch (err) {
+      alert(err.message || 'Failed to logout WhatsApp.');
+    } finally {
+      setWaLoading(false);
     }
   };
 
@@ -768,6 +875,204 @@ export default function Settings() {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* WhatsApp Group & Live Selfie Alert Configuration */}
+        <div className="bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800/60 rounded-3xl p-6 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                  <span>WhatsApp Group Attendance Alerts</span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    waStatus.isConnected
+                      ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+                      : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300'
+                  }`}>
+                    {waStatus.isConnected ? '● Connected' : '○ Scan QR to Link'}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Staff selfie punch submit karte hi WhatsApp group me photo, live GPS location aur details bhejein
+                </p>
+              </div>
+            </div>
+
+            {waStatus.isConnected && (
+              <button
+                type="button"
+                onClick={handleLogoutWa}
+                disabled={waLoading}
+                className="px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Unlink WhatsApp</span>
+              </button>
+            )}
+          </div>
+
+          {/* Test Alert Status Banner */}
+          {waTestAlert && (
+            <div className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 border ${
+              waTestAlert.type === 'success'
+                ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 text-emerald-800 dark:text-emerald-200'
+                : 'bg-rose-50 dark:bg-rose-950/50 border-rose-300 text-rose-800 dark:text-rose-200'
+            }`}>
+              {waTestAlert.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 text-rose-600" />}
+              <span>{waTestAlert.text}</span>
+            </div>
+          )}
+
+          {/* Connected View vs QR Code View */}
+          {!waStatus.isConnected ? (
+            /* QR Code Linking Interface */
+            <div className="flex flex-col md:flex-row items-center gap-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
+              <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-200 flex flex-col items-center justify-center shrink-0">
+                {waStatus.qrDataUrl ? (
+                  <img
+                    src={waStatus.qrDataUrl}
+                    alt="WhatsApp Web QR Code"
+                    className="w-48 h-48 rounded-lg"
+                  />
+                ) : (
+                  <div className="w-48 h-48 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+                    <span className="text-xs font-semibold">Generating QR Code...</span>
+                  </div>
+                )}
+                <span className="text-[10px] font-bold text-slate-500 mt-2">Scan with WhatsApp</span>
+              </div>
+
+              <div className="space-y-3 text-xs flex-1">
+                <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
+                  📱 WhatsApp Connect Karne Ka Tarika:
+                </h4>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                  <li>Apne phone me WhatsApp kholein</li>
+                  <li>Upar <strong>Settings</strong> ya <strong>3-dots Menu</strong> par tap karein</li>
+                  <li><strong>Linked Devices</strong> (लिंक्ड डिवाइसेज) par click karein</li>
+                  <li><strong>Link a Device</strong> par tap karke ye QR code scan karein</li>
+                </ol>
+                <p className="text-[11px] text-slate-400 italic">
+                  Ek baar scan hone ke baad ye automatically connect ho jayega aur aap apna group select kar sakenge.
+                </p>
+                <button
+                  type="button"
+                  onClick={loadWaStatus}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh QR Code</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Connected Configuration Interface */
+            <div className="space-y-4">
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold">
+                  <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  <span>WhatsApp Account Active: {waStatus.user?.id ? `+${waStatus.user.id.split(':')[0]}` : 'Admin Number'}</span>
+                </div>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">Status: Ready</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Group Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Select WhatsApp Alert Group:
+                  </label>
+                  <select
+                    value={waStatus.configuredGroupId}
+                    onChange={(e) => {
+                      const selGroup = waGroups.find(g => g.id === e.target.value);
+                      setWaStatus(prev => ({
+                        ...prev,
+                        configuredGroupId: e.target.value,
+                        configuredGroupName: selGroup ? selGroup.name : prev.configuredGroupName
+                      }));
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="">-- Choose WhatsApp Group ({waGroups.length} detected) --</option>
+                    {waGroups.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.participantsCount} members)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Jis group me attendance notifications bhejna hai
+                  </p>
+                </div>
+
+                {/* Direct Admin Phone backup */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Or Admin Mobile Number (1-to-1):
+                  </label>
+                  <input
+                    type="text"
+                    value={waStatus.configuredAdminPhone || ''}
+                    onChange={(e) => setWaStatus(prev => ({ ...prev, configuredAdminPhone: e.target.value }))}
+                    placeholder="e.g. 917782808063"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Country code ke sath (e.g. 91xxxxxxxxxx)
+                  </p>
+                </div>
+              </div>
+
+              {/* Toggle Enable Notifications */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white text-xs block">
+                    Instant Selfie Punch Alerts
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Staff ke selfie attendance request daalte hi WhatsApp par photo aur live location deliver karein
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!waStatus.notificationsEnabled}
+                    onChange={(e) => setWaStatus(prev => ({ ...prev, notificationsEnabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Action Buttons: Save & Test Message */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveWaConfig}
+                  disabled={waSaving}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{waSaving ? 'Saving...' : 'Save WhatsApp Settings'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTestWa}
+                  disabled={waTesting || (!waStatus.configuredGroupId && !waStatus.configuredAdminPhone)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                  <Send className={`w-4 h-4 ${waTesting ? 'animate-pulse' : ''}`} />
+                  <span>{waTesting ? 'Sending Test...' : 'Send Test Alert to Group'}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Weekly Off Days */}
