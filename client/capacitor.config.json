@@ -1,0 +1,17 @@
+{
+  "appId": "com.arshi.attendance",
+  "appName": "Arshi Staff Portal",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": [
+      "attendence-sysyem.vercel.app",
+      "*"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

@@ -53,7 +53,16 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Company Header with Mobile Close Button */}
         <div className="h-16 px-6 flex items-center justify-between border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand-500/30">
+            <img
+              src="/arshi_logo.png"
+              alt="Arshi Enterprises Logo"
+              className="w-10 h-10 rounded-xl object-cover shadow-lg shadow-emerald-500/30 border border-emerald-500/30"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextElementSibling.style.display = 'flex';
+              }}
+            />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 items-center justify-center text-white font-black text-lg shadow-lg shadow-brand-500/30 hidden">
               A
             </div>
             <div>

@@ -10,7 +10,7 @@ const { getLocalDateString } = require('../utils/dateUtils');
 // 1. Staff Submits Selfie Attendance Request
 exports.submitSelfieRequest = async (req, res) => {
   try {
-    const { requestedType = 'IN', selfiePhoto, remarks = '', requestTime = new Date() } = req.body;
+    const { requestedType = 'IN', selfiePhoto, remarks = '', requestTime = new Date(), location } = req.body;
 
     if (!selfiePhoto) {
       return res.status(400).json({ success: false, message: 'Selfie photo is required to submit manual attendance.' });
@@ -67,6 +67,7 @@ exports.submitSelfieRequest = async (req, res) => {
       date: dateStr,
       selfiePhoto,
       remarks: remarks || `Selfie ${cleanType} request by ${employee.fullName}`,
+      location: location || null,
       status: 'Pending'
     });
 

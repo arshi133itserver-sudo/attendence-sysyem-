@@ -422,7 +422,31 @@ export function exportMonthlyExcel(employee, month, summary = {}, dailyRecords =
   XLSX.utils.book_append_sheet(wb, ws, 'Monthly_Timesheet');
   XLSX.utils.book_append_sheet(wb, wsPolicy, 'Company_Policy_Rules');
 
-  XLSX.writeFile(wb, `Monthly_Report_${employee.employeeId}_${month}.xlsx`);
+  const filename = `Monthly_Report_${employee.employeeId}_${month}.xlsx`;
+
+  // On Mobile / Android WebView, use Web Share API to directly save/share Excel file
+  try {
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const file = new File([blob], filename, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: `Attendance Report - ${employee.fullName || employee.employeeId}`,
+        text: `Arshi Enterprises Monthly Timesheet (${month})`
+      }).catch((err) => {
+        if (err.name !== 'AbortError') {
+          XLSX.writeFile(wb, filename);
+        }
+      });
+      return;
+    }
+  } catch (e) {
+    console.warn('Web share Excel fallback to writeFile:', e);
+  }
+
+  XLSX.writeFile(wb, filename);
 }
 
 /**
@@ -559,5 +583,28 @@ export function exportMonthlyPdf(employee, month, summary, dailyRecords) {
     }
   });
 
-  doc.save(`Monthly_Report_${employee.employeeId}_${month}.pdf`);
+  const pdfFilename = `Monthly_Report_${employee.employeeId}_${month}.pdf`;
+
+  // On Mobile / Android WebView, use Web Share API to directly save/share PDF file
+  try {
+    const pdfBlob = doc.output('blob');
+    const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: `Attendance PDF - ${employee.fullName || employee.employeeId}`,
+        text: `Arshi Enterprises Monthly Timesheet PDF (${month})`
+      }).catch((err) => {
+        if (err.name !== 'AbortError') {
+          doc.save(pdfFilename);
+        }
+      });
+      return;
+    }
+  } catch (e) {
+    console.warn('Web share PDF fallback to save:', e);
+  }
+
+  doc.save(pdfFilename);
 }

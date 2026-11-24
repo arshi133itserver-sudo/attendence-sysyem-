@@ -187,10 +187,10 @@ exports.getEmployeeMonthlyReport = async (req, res) => {
 
     let employee = null;
     if (employeeId.match(/^[0-9a-fA-F]{24}$/)) {
-      employee = await Employee.findById(employeeId).select('-profilePhoto').lean();
+      employee = await Employee.findById(employeeId).lean();
     }
     if (!employee) {
-      employee = await Employee.findOne({ employeeId }).select('-profilePhoto').lean();
+      employee = await Employee.findOne({ employeeId }).lean();
     }
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });

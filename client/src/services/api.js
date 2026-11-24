@@ -1,4 +1,14 @@
-const API_BASE = '/api';
+const isLocalDev = typeof window !== 'undefined' && 
+  window.location.protocol === 'http:' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && 
+  window.location.port !== '';
+
+const API_BASE = isLocalDev
+  ? '/api'
+  : (import.meta.env.VITE_API_BASE_URL || 
+     (typeof window !== 'undefined' && window.location.origin.includes('vercel.app') 
+       ? '/api' 
+       : 'https://attendence-sysyem.vercel.app/api'));
 
 function getAuthHeader() {
   const token = localStorage.getItem('arshi_token');

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Camera,
   X,
@@ -10,7 +10,10 @@ import {
   Send,
   Sparkles,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  MapPin,
+  RefreshCw,
+  Navigation
 } from 'lucide-react';
 import { attendanceRequestApi } from '../services/api';
 
@@ -24,11 +27,56 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
   const [cameraError, setCameraError] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  // GPS Geolocation state
+  const [location, setLocation] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState('');
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Start Camera when modal opens
+  // Acquire high-accuracy GPS coordinates
+  const fetchLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Device me GPS geolocation support nahi hai.');
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError('');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Math.round(position.coords.accuracy)
+        });
+        setLocationLoading(false);
+      },
+      (err) => {
+        console.warn('Geolocation acquisition error:', err);
+        setLocationLoading(false);
+        let msg = 'GPS location detect nahi ho payi.';
+        if (err.code === 1) {
+          msg = 'Location permission denied. Kripya phone settings me location allow karein.';
+        } else if (err.code === 2) {
+          msg = 'Location unavailable. Kripya GPS/Internet on karein.';
+        } else if (err.code === 3) {
+          msg = 'Location request timed out. Dobara try karein.';
+        }
+        setLocationError(msg);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0
+      }
+    );
+  }, []);
+
+  // Start Camera & Request GPS when modal opens
   useEffect(() => {
     let activeStream = null;
 
@@ -37,6 +85,10 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
       setSuccessMessage('');
       setCameraError(false);
 
+      // Trigger GPS request immediately
+      fetchLocation();
+
+      // Start webcam stream
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia({
@@ -69,7 +121,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
         activeStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [isOpen, capturedPhoto]);
+  }, [isOpen, capturedPhoto, fetchLocation]);
 
   // Clean up stream on close
   const handleClose = () => {
@@ -83,25 +135,99 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
     if (onClose) onClose();
   };
 
-  // Capture photo from video stream
+  // Helper to draw verified watermark on canvas
+  const drawWatermark = (ctx, canvasWidth, canvasHeight, loc) => {
+    const bannerHeight = 84;
+    const bannerY = canvasHeight - bannerHeight;
+
+    // Semi-transparent gradient bar at bottom
+    const gradient = ctx.createLinearGradient(0, bannerY, 0, canvasHeight);
+    gradient.addColorStop(0, 'rgba(15, 23, 42, 0.82)');
+    gradient.addColorStop(1, 'rgba(2, 6, 23, 0.96)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, bannerY, canvasWidth, bannerHeight);
+
+    // Accent line on top of banner
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, bannerY);
+    ctx.lineTo(canvasWidth, bannerY);
+    ctx.stroke();
+
+    // Line 1: Brand & Punch Type
+    ctx.fillStyle = '#34d399'; // Emerald-400
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('ARSHI ENTERPRISES • VERIFIED PUNCH', 16, bannerY + 22);
+
+    ctx.fillStyle = requestedType === 'IN' ? '#10b981' : '#38bdf8';
+    ctx.font = 'bold 12px sans-serif';
+    const typeLabel = `CLOCK ${requestedType}`;
+    ctx.fillText(typeLabel, canvasWidth - ctx.measureText(typeLabel).width - 16, bannerY + 22);
+
+    // Line 2: Staff Name & ID + Date/Time
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px sans-serif';
+    const empName = `${employee?.fullName || 'Staff'} (${employee?.employeeId || 'ARS-EMP'})`;
+    ctx.fillText(empName, 16, bannerY + 44);
+
+    const now = new Date();
+    const timeFormatted = now.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) + ' ' + now.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '11px sans-serif';
+    ctx.fillText(timeFormatted, canvasWidth - ctx.measureText(timeFormatted).width - 16, bannerY + 44);
+
+    // Line 3: GPS Coordinates & Accuracy Watermark
+    ctx.font = '11px monospace';
+    if (loc && loc.latitude) {
+      ctx.fillStyle = '#38bdf8'; // Sky-400
+      const locText = `GPS: ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)} (±${loc.accuracy}m)`;
+      ctx.fillText(locText, 16, bannerY + 66);
+    } else {
+      ctx.fillStyle = '#fbbf24'; // Amber-400
+      ctx.fillText('GPS: Location Lock Pending / Manual Verify', 16, bannerY + 66);
+    }
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px sans-serif';
+    const geoBadge = 'GEO-TAGGED & TIME-STAMPED';
+    ctx.fillText(geoBadge, canvasWidth - ctx.measureText(geoBadge).width - 16, bannerY + 66);
+  };
+
+  // Capture photo from video stream with GPS & time watermark
   const handleCapture = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current || document.createElement('canvas');
 
-    const width = video.videoWidth || 480;
+    const width = video.videoWidth || 640;
     const height = video.videoHeight || 480;
 
-    canvas.width = 400;
-    canvas.height = Math.round((height * 400) / width);
+    canvas.width = 640;
+    canvas.height = Math.round((height * 640) / width);
 
     const ctx = canvas.getContext('2d');
+
     // Mirror image for natural selfie feel
+    ctx.save();
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    // Draw Watermark
+    drawWatermark(ctx, canvas.width, canvas.height, location);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
     setCapturedPhoto(dataUrl);
 
     // Stop video stream after capture
@@ -117,7 +243,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
     setError('');
   };
 
-  // File Upload Fallback
+  // File Upload Fallback with Watermark
   const handleFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -128,11 +254,12 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = Math.round((img.height * 400) / img.width);
+        canvas.width = 640;
+        canvas.height = Math.round((img.height * 640) / img.width);
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setCapturedPhoto(canvas.toDataURL('image/jpeg', 0.85));
+        drawWatermark(ctx, canvas.width, canvas.height, location);
+        setCapturedPhoto(canvas.toDataURL('image/jpeg', 0.88));
       };
     };
     reader.readAsDataURL(file);
@@ -153,8 +280,13 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
       const payload = {
         requestedType,
         selfiePhoto: capturedPhoto,
-        remarks: remarks.trim() || `Manual selfie ${requestedType} punch`,
-        requestTime: new Date()
+        remarks: remarks.trim() || `Selfie ${requestedType} punch from Staff App`,
+        requestTime: new Date(),
+        location: location ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracy: location.accuracy
+        } : null
       };
 
       const res = await attendanceRequestApi.submitSelfie(payload);
@@ -180,7 +312,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden my-auto">
         
         {/* Header */}
@@ -192,8 +324,8 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
             <div>
               <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-1.5">
                 <span>Selfie Attendance</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                  Live Verify
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                  GPS Verified
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -207,6 +339,41 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Live GPS Status Bar */}
+        <div className="px-5 pt-3">
+          <div className={`p-2.5 rounded-2xl text-[11px] font-medium flex items-center justify-between border ${
+            location
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+              : locationLoading
+              ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+          }`}>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <MapPin className={`w-4 h-4 shrink-0 ${location ? 'text-emerald-600' : 'text-amber-500'}`} />
+              <div className="truncate">
+                {locationLoading ? (
+                  <span>Exact GPS location trace ho rahi hai...</span>
+                ) : location ? (
+                  <span>
+                    <strong>GPS Locked:</strong> {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)} (±{location.accuracy}m)
+                  </span>
+                ) : (
+                  <span>{locationError || 'GPS location mangi ja rahi hai...'}</span>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={fetchLocation}
+              disabled={locationLoading}
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 shrink-0 ml-1 text-slate-600 dark:text-slate-300"
+              title="Refresh GPS"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${locationLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}
@@ -228,7 +395,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
           {/* Camera Viewport / Photo Preview */}
           <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-950 border-2 border-slate-800 shadow-inner flex flex-col items-center justify-center">
             {capturedPhoto ? (
-              // Captured Snapshot Preview
+              // Captured Snapshot Preview with Watermark
               <div className="relative w-full h-full">
                 <img
                   src={capturedPhoto}
@@ -237,7 +404,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
                 />
                 <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-emerald-500 text-white font-bold text-[10px] flex items-center gap-1 shadow">
                   <CheckCircle className="w-3 h-3" />
-                  <span>Selfie Captured</span>
+                  <span>GPS Watermarked</span>
                 </div>
                 <button
                   type="button"
@@ -271,10 +438,10 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
                 <button
                   type="button"
                   onClick={handleCapture}
-                  className="absolute bottom-3 flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-600 hover:bg-brand-500 text-white font-black text-xs shadow-xl shadow-brand-600/40 border-2 border-white/30 hover:scale-105 active:scale-95 transition-all"
+                  className="absolute bottom-3 flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-xl shadow-emerald-600/40 border-2 border-white/30 hover:scale-105 active:scale-95 transition-all"
                 >
                   <Camera className="w-4 h-4" />
-                  <span>Snap Photo (फोटो खींचें)</span>
+                  <span>Snap Photo & Geotag</span>
                 </button>
               </div>
             ) : (
@@ -284,7 +451,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
                 <div>
                   <p className="font-bold text-slate-300">Camera Permission Required</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Webcam blocked hai ya device me camera detect nahi hua. Aap file upload kar sakte hain:
+                    Webcam blocked hai ya device me camera detect nahi hua. Aap photo upload kar sakte hain:
                   </p>
                 </div>
                 <button
@@ -344,8 +511,8 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
           {/* Live Punch Time Banner */}
           <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
             <span className="flex items-center gap-1.5 font-bold text-slate-600 dark:text-slate-300">
-              <Clock className="w-4 h-4 text-brand-500" />
-              <span>Submission Time:</span>
+              <Clock className="w-4 h-4 text-emerald-500" />
+              <span>Punch Submission Time:</span>
             </span>
             <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
               {currentTimeStr}
@@ -359,10 +526,10 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
             </label>
             <input
               type="text"
-              placeholder="e.g. Card bhul gaya, Field visit duty, Office entry..."
+              placeholder="e.g. Field visit duty, Card bhul gaya, Office entry..."
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
             />
           </div>
 
@@ -371,7 +538,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
             <button
               type="submit"
               disabled={loading || !capturedPhoto || !!successMessage}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-black text-xs shadow-lg shadow-brand-600/30 transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
               <span>

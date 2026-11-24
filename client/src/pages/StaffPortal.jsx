@@ -263,19 +263,19 @@ export default function StaffPortal() {
             {/* Export Timesheets */}
             <button
               onClick={handleExportExcel}
-              className="px-3 py-2.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-bold transition-colors flex items-center gap-1.5 active:scale-95"
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-700/20 active:scale-95"
               title="Download Monthly Timesheet in Excel format"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              <span className="hidden sm:inline">Excel</span>
+              <span>Excel</span>
             </button>
             <button
               onClick={handleExportPdf}
-              className="px-3 py-2.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-bold transition-colors flex items-center gap-1.5 active:scale-95"
+              className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-rose-700/20 active:scale-95"
               title="Download Monthly Timesheet in PDF format"
             >
               <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF</span>
+              <span>PDF</span>
             </button>
           </div>
         </div>

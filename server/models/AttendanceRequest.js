@@ -31,6 +31,12 @@ const AttendanceRequestSchema = new mongoose.Schema({
     type: String,
     default: 'Selfie attendance request by staff'
   },
+  location: {
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
+    accuracy: { type: Number, default: null },
+    address: { type: String, default: '' }
+  },
   status: {
     type: String,
     enum: ['Pending', 'Approved', 'Rejected'],
