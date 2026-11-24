@@ -208,8 +208,72 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
     ctx.fillText(geoBadge, canvasWidth - ctx.measureText(geoBadge).width - 16, bannerY + 66);
   };
 
-  // Capture photo from video stream with GPS & time watermark
-  const handleCapture = () => {
+  // Direct Forward to Company WhatsApp Group from Mobile
+  const handleForwardToWhatsApp = async (photoOverride = null, typeOverride = null) => {
+    const photo = photoOverride || capturedPhoto;
+    const pType = typeOverride || requestedType;
+    const empName = employee?.fullName || 'Staff Member';
+    const empId = employee?.employeeId || 'ID';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    let locLines = '';
+    if (location && location.latitude && location.longitude) {
+      const lat = Number(location.latitude).toFixed(6);
+      const lng = Number(location.longitude).toFixed(6);
+      const acc = location.accuracy ? ` (±${location.accuracy}m)` : '';
+      locLines = `📍 *GPS:* ${lat}, ${lng}${acc}\n🗺️ *Google Maps:* https://www.google.com/maps?q=${lat},${lng}\n`;
+    }
+
+    const shareText = [
+      '📸 *ARSHI ENTERPRISES — SELFIE ATTENDANCE PUNCH*',
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      `👤 *Staff:* *${empName}* (\`${empId}\`)`,
+      `⏱️ *Punch:* *CLOCK ${pType}* (${pType === 'IN' ? 'Office Entry' : 'Office Exit'})`,
+      `📅 *Date & Time:* ${dateStr} • *${timeStr} IST*`,
+      locLines,
+      `💬 *Note:* _"${remarks.trim() || 'Direct Selfie Punch'}"_`,
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      '✅ *Status: DIRECTLY RECORDED IN SYSTEM*'
+    ].filter(Boolean).join('\n');
+
+    // 1. Try Native Android Web Share with Image File
+    if (photo && navigator.canShare) {
+      try {
+        const res = await fetch(photo);
+        const blob = await res.blob();
+        const file = new File([blob], `Arshi_Attendance_${empId}_${pType}.jpg`, { type: 'image/jpeg' });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `Attendance Punch - ${empName}`,
+            text: shareText
+          });
+          return;
+        }
+      } catch (shareErr) {
+        console.warn('Native share error or dismissed:', shareErr.message);
+      }
+    }
+
+    // 2. Fallback to WhatsApp URL scheme
+    const waUrl = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+    const webWaUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+
+    try {
+      window.location.href = waUrl;
+      setTimeout(() => {
+        window.open(webWaUrl, '_blank');
+      }, 800);
+    } catch (_) {
+      window.open(webWaUrl, '_blank');
+    }
+  };
+
+  // Instant Capture + Punch + Auto-Share to WhatsApp in 1 Action
+  const handleCaptureAndPunch = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current || document.createElement('canvas');
@@ -236,6 +300,81 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
     setCapturedPhoto(dataUrl);
 
     // Stop video stream after capture
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+
+    setLoading(true);
+    setError('');
+
+    // Launch attendance recording
+    const payload = {
+      requestedType,
+      selfiePhoto: dataUrl,
+      remarks: remarks.trim() || `Direct selfie ${requestedType} punch from Staff App`,
+      requestTime: new Date(),
+      location: location ? {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy
+      } : null
+    };
+
+    const submitPromise = attendanceRequestApi.submitSelfie(payload)
+      .then((res) => {
+        setSuccessMessage(res.message || `Attendance marked! Clock ${requestedType} recorded successfully.`);
+        setSubmittedPunch({
+          requestedType,
+          photo: dataUrl,
+          location,
+          remarks,
+          time: new Date()
+        });
+        if (onSubmitted) onSubmitted(res);
+      })
+      .catch((err) => {
+        console.error('Punch save error:', err);
+        setError(err.message || 'Failed to record selfie attendance.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+
+    // Instantly trigger WhatsApp share on click gesture
+    try {
+      await handleForwardToWhatsApp(dataUrl, requestedType);
+    } catch (shareErr) {
+      console.warn('Auto WhatsApp share error:', shareErr);
+    }
+
+    await submitPromise;
+  };
+
+  // Capture photo without immediately submitting (for preview)
+  const handleCaptureOnly = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement('canvas');
+
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+
+    canvas.width = 640;
+    canvas.height = Math.round((height * 640) / width);
+
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    drawWatermark(ctx, canvas.width, canvas.height, location);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    setCapturedPhoto(dataUrl);
+
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
@@ -270,9 +409,9 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
     reader.readAsDataURL(file);
   };
 
-  // Submit Direct Attendance Punch (No Admin Approval Needed)
+  // Submit Direct Attendance Punch & Auto-Share to WhatsApp
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!capturedPhoto) {
       setError('Please snap your selfie photo before submitting.');
       return;
@@ -280,6 +419,9 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
 
     setLoading(true);
     setError('');
+
+    // Trigger WhatsApp share immediately
+    const sharePromise = handleForwardToWhatsApp(capturedPhoto, requestedType);
 
     try {
       const payload = {
@@ -297,7 +439,6 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
       const res = await attendanceRequestApi.submitSelfie(payload);
       setSuccessMessage(res.message || `Attendance marked! Clock ${requestedType} recorded successfully.`);
       
-      // Store punch details for direct WhatsApp forwarding
       setSubmittedPunch({
         requestedType,
         photo: capturedPhoto,
@@ -312,68 +453,8 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
     } finally {
       setLoading(false);
     }
-  };
 
-  // Direct Forward to Company WhatsApp Group from Mobile
-  const handleForwardToWhatsApp = async () => {
-    const empName = employee?.fullName || 'Staff Member';
-    const empId = employee?.employeeId || 'ID';
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-    let locLines = '';
-    if (location && location.latitude && location.longitude) {
-      const lat = Number(location.latitude).toFixed(6);
-      const lng = Number(location.longitude).toFixed(6);
-      const acc = location.accuracy ? ` (±${location.accuracy}m)` : '';
-      locLines = `📍 *GPS:* ${lat}, ${lng}${acc}\n🗺️ *Google Maps:* https://www.google.com/maps?q=${lat},${lng}\n`;
-    }
-
-    const shareText = [
-      '📸 *ARSHI ENTERPRISES — SELFIE ATTENDANCE PUNCH*',
-      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-      `👤 *Staff:* *${empName}* (\`${empId}\`)`,
-      `⏱️ *Punch:* *CLOCK ${requestedType}* (${requestedType === 'IN' ? 'Office Entry' : 'Office Exit'})`,
-      `📅 *Date & Time:* ${dateStr} • *${timeStr} IST*`,
-      locLines,
-      `💬 *Note:* _"${remarks.trim() || 'Direct Selfie Punch'}"_`,
-      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-      '✅ *Status: DIRECTLY RECORDED IN SYSTEM*'
-    ].filter(Boolean).join('\n');
-
-    // 1. Try Native Android Web Share with Image File
-    try {
-      if (capturedPhoto && navigator.canShare) {
-        const res = await fetch(capturedPhoto);
-        const blob = await res.blob();
-        const file = new File([blob], `Arshi_Attendance_${empId}_${requestedType}.jpg`, { type: 'image/jpeg' });
-
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: `Attendance Punch - ${empName}`,
-            text: shareText
-          });
-          return;
-        }
-      }
-    } catch (shareErr) {
-      console.warn('Native share error or dismissed:', shareErr.message);
-    }
-
-    // 2. Fallback to WhatsApp URL scheme
-    const waUrl = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
-    const webWaUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-
-    try {
-      window.location.href = waUrl;
-      setTimeout(() => {
-        window.open(webWaUrl, '_blank');
-      }, 800);
-    } catch (_) {
-      window.open(webWaUrl, '_blank');
-    }
+    await sharePromise;
   };
 
   if (!isOpen) return null;
@@ -402,7 +483,7 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Direct attendance punch karein aur WhatsApp group me photo bhejein
+                Selfie lete hi direct attendance record hogi aur WhatsApp group me share ho jayegi
               </p>
             </div>
           </div>
@@ -477,11 +558,11 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
             <div className="pt-2 space-y-2.5">
               <button
                 type="button"
-                onClick={handleForwardToWhatsApp}
+                onClick={() => handleForwardToWhatsApp(submittedPunch?.photo, submittedPunch?.requestedType)}
                 className="w-full py-3.5 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold text-sm shadow-xl shadow-[#25D366]/30 transition-all flex items-center justify-center gap-2 active:scale-95"
               >
                 <MessageCircle className="w-5 h-5 fill-current" />
-                <span>Forward to WhatsApp Group</span>
+                <span>Forward to WhatsApp Group (व्हाट्सएप में भेजें)</span>
               </button>
 
               <button
@@ -545,15 +626,22 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
                     </div>
                   </div>
 
-                  {/* Snap Button Floating at bottom */}
-                  <button
-                    type="button"
-                    onClick={handleCapture}
-                    className="absolute bottom-3 flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-xl shadow-emerald-600/40 border-2 border-white/30 hover:scale-105 active:scale-95 transition-all"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Snap Photo & Geotag</span>
-                  </button>
+                  {/* Instant Snap & Auto-Share Button Floating on Camera */}
+                  <div className="absolute bottom-3 px-3 w-full flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleCaptureAndPunch}
+                      disabled={loading}
+                      className="w-full max-w-xs flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-[#25D366] hover:brightness-110 text-white font-black text-xs shadow-2xl shadow-emerald-600/60 border-2 border-white/40 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <Camera className="w-4 h-4 shrink-0" />
+                      <span>
+                        {loading
+                          ? 'Recording & Opening WhatsApp...'
+                          : `📸 Selfie लें & WhatsApp शेयर करें (Clock ${requestedType})`}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 // Camera blocked / unavailable fallback
@@ -649,13 +737,13 @@ export default function SelfiePunchModal({ isOpen, onClose, onSubmitted, employe
               <button
                 type="submit"
                 disabled={loading || !capturedPhoto}
-                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 active:scale-98"
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-[#25D366] hover:brightness-110 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 active:scale-98"
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>
                   {loading
-                    ? 'Recording Attendance...'
-                    : `Direct Clock ${requestedType} Punch (सीधी हाजिरी लगाएं)`}
+                    ? 'Recording & Opening WhatsApp...'
+                    : `Clock ${requestedType} Punch & WhatsApp Share (हाजिरी लगाएं)`}
                 </span>
               </button>
             </div>
